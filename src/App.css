@@ -1,0 +1,4 @@
+/* Tailwind handles all styling — only global overrides here */
+* { box-sizing: border-box; }
+body { background: #0f0e17; color: #f3f4f6; }
+input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
