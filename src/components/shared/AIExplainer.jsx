@@ -23,7 +23,7 @@ export default function AIExplainer({ algorithm, step, stepIndex, totalSteps }) 
 
     try {
       const stream = await client.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         max_tokens: 150,
         stream: true,
         messages: [
