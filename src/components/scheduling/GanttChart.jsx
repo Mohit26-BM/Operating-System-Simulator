@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { buildGantt } from '../../simulation/scheduling/metrics'
 
 const COLORS = [
   'bg-indigo-500', 'bg-amber-500', 'bg-emerald-500',
@@ -6,43 +7,46 @@ const COLORS = [
 ]
 
 function colorFor(pid) {
-  return COLORS[parseInt(pid?.slice(1) ?? 0) % COLORS.length]
+  const n = parseInt(String(pid ?? '').replace(/\D/g, ''), 10)
+  return COLORS[(Number.isFinite(n) ? n : 0) % COLORS.length]
 }
 
+// One cell per CPU time unit. Steps that are not CPU time (a process finishing, being re-queued)
+// do not get a cell, so the chart shows only what the CPU actually did.
 export default function GanttChart({ steps, currentStep }) {
   if (!steps.length) return null
-  const visible = steps.slice(0, currentStep + 1)
-  const last = visible[visible.length - 1]
+  const cells = buildGantt(steps, currentStep)
+  const last = steps[currentStep]
+  const endTime = cells.length ? cells[cells.length - 1].time + cells[cells.length - 1].span : 0
 
   return (
     <div className="bg-os-surface border border-os-border rounded-xl p-4 space-y-3">
       <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Gantt Chart</h3>
 
       <div className="flex flex-wrap gap-1">
-        {visible.map((s, i) => (
+        {cells.map((c, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: i === currentStep ? 1.1 : 1 }}
+            animate={{ opacity: 1, scale: c.stepIndex === currentStep ? 1.1 : 1 }}
             transition={{ duration: 0.15 }}
-            className={`w-11 h-11 rounded-lg flex items-center justify-center text-xs font-bold text-white
-              ${s.running ? colorFor(s.running) : 'bg-gray-700'}
-              ${i === currentStep ? 'ring-2 ring-white ring-offset-1 ring-offset-os-surface' : ''}`}
-            title={s.running ?? 'Idle'}
+            style={c.span > 1 ? { width: '5.5rem' } : undefined}
+            className={`${c.span > 1 ? '' : 'w-11'} h-11 rounded-lg flex items-center justify-center text-xs font-bold text-white
+              ${c.pid ? colorFor(c.pid) : 'bg-gray-700'}
+              ${c.stepIndex === currentStep ? 'ring-2 ring-white ring-offset-1 ring-offset-os-surface' : ''}`}
+            title={c.pid ?? `Idle for ${c.span} unit(s)`}
           >
-            {s.running ?? '—'}
+            {c.pid ?? (c.span > 1 ? `idle ×${c.span}` : '—')}
           </motion.div>
         ))}
       </div>
 
-      {/* Time labels */}
+      {/* Time labels: each cell starts at its label; the final label is the end time */}
       <div className="flex flex-wrap gap-1">
-        {visible.map((s, i) => (
-          <span key={i} className="w-11 text-center text-[10px] text-gray-500">{s.time}</span>
+        {cells.map((c, i) => (
+          <span key={i} style={c.span > 1 ? { width: '5.5rem' } : undefined} className={`${c.span > 1 ? '' : 'w-11'} text-center text-[10px] text-gray-500`}>{c.time}</span>
         ))}
-        {visible.length > 0 && (
-          <span className="w-11 text-center text-[10px] text-gray-500">{last.time + 1}</span>
-        )}
+        {cells.length > 0 && <span className="w-11 text-center text-[10px] text-gray-500">{endTime}</span>}
       </div>
 
       {last?.completed && (

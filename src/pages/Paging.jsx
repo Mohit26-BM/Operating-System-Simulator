@@ -9,7 +9,7 @@ import Controls from '../components/shared/Controls'
 import AIExplainer from '../components/shared/AIExplainer'
 import SimHelp from '../components/shared/SimHelp'
 import { usePlayer } from '../hooks/usePlayer'
-import { simulatePaging, getPagingCode, getPagingAnnotations } from '../simulation/paging'
+import { simulatePaging, getPagingCode, getPagingAnnotations, parseReferenceString } from '../simulation/paging'
 
 const ALGORITHMS = ['FIFO', 'LRU', 'Optimal']
 
@@ -62,9 +62,9 @@ export default function Paging() {
     const e = {}
     const fc = Number(frameCount)
     if (!Number.isInteger(fc) || fc < 1 || fc > 8) e.frames = 'Must be 1–8'
-    const pages = refString.trim().split(/\s+/).map(Number)
-    if (pages.length < 2) e.ref = 'Enter at least 2 page numbers'
-    if (pages.some(isNaN)) e.ref = 'Reference string must contain only numbers separated by spaces'
+    const parsed = parseReferenceString(refString)
+    if (!parsed.ok) e.ref = parsed.error
+    else if (parsed.pages.length < 2) e.ref = 'Enter at least 2 page numbers'
     return e
   }
 
@@ -72,8 +72,7 @@ export default function Paging() {
     const e = validate()
     setErrors(e)
     if (Object.keys(e).length > 0) return
-    const pages = refString.trim().split(/\s+/).map(Number)
-    reset(simulatePaging({ frames: frameCount, referenceString: pages, algorithm }))
+    reset(simulatePaging({ frames: Number(frameCount), referenceString: parseReferenceString(refString).pages, algorithm }))
   }
 
   return (

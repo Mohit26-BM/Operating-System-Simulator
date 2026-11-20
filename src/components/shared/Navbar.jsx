@@ -25,12 +25,13 @@ const GROUPS = [
       { label: 'Memory & Paging',    path: '/paging'            },
       { label: 'Page Replacement',   path: '/page-replacement'  },
       { label: 'Memory Allocation',  path: '/memory-allocation' },
+      { label: 'Dynamic Allocation', path: '/dynamic-memory'    },
       { label: 'Disk Scheduling',    path: '/disk'              },
     ],
   },
 ]
 
-function DropdownGroup({ group, closeAll }) {
+function DropdownGroup({ group }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const location = useLocation()

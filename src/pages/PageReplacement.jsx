@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SimHelp from '../components/shared/SimHelp'
 import { fifo } from '../simulation/paging/fifo'
 import { lru }  from '../simulation/paging/lru'
 import { optimal } from '../simulation/paging/optimal'
+import { parseReferenceString } from '../simulation/paging/common'
 
 const HELP = {
   title: 'Page Replacement',
@@ -50,13 +51,12 @@ const ALGO_COLORS = {
   Optimal: { accent: '#a78bfa', bg: 'bg-violet-500/10', border: 'border-violet-500/40', text: 'text-violet-400' },
 }
 
-function FrameGrid({ frames, frameCount, stepEvent, evicted, incoming }) {
+function FrameGrid({ frames, frameCount, stepEvent, incoming }) {
   const slots = Array.from({ length: frameCount }, (_, i) => frames[i] ?? null)
   return (
     <div className="flex gap-2 justify-center py-2">
       {slots.map((page, i) => {
         const isNew     = page === incoming && stepEvent === 'fault' && i === frames.indexOf(incoming)
-        const isEvicted = page === null && evicted !== null
         return (
           <motion.div
             key={i}
@@ -96,7 +96,7 @@ function AlgoColumn({ name, steps, cursor, frameCount }) {
       </div>
 
       {/* Frames */}
-      {step && <FrameGrid frames={step.memory} frameCount={frameCount} stepEvent={step.event} evicted={step.evicted} incoming={step.page} />}
+      {step && <FrameGrid frames={step.memory} frameCount={frameCount} stepEvent={step.event} incoming={step.page} />}
 
       {/* Hit/fault indicator */}
       <AnimatePresence mode="wait">
@@ -141,15 +141,17 @@ export default function PageReplacement() {
   const [playing, setPlaying]       = useState(false)
   const [intervalId, setIntervalId] = useState(null)
 
-  const refString = useMemo(() => {
-    return refInput.trim().split(/\s+/).map(Number).filter(n => !isNaN(n))
-  }, [refInput])
+  const parsed = useMemo(() => parseReferenceString(refInput), [refInput])
+  const refString = useMemo(() => (parsed.ok ? parsed.pages : []), [parsed])
 
-  const { fifoSteps, lruSteps, optSteps } = useMemo(() => ({
-    fifoSteps: fifo(refString, frameCount),
-    lruSteps:  lru(refString, frameCount),
-    optSteps:  optimal(refString, frameCount),
-  }), [refString, frameCount])
+  const { fifoSteps, lruSteps, optSteps } = useMemo(() => (
+    parsed.ok
+      ? { fifoSteps: fifo(refString, frameCount), lruSteps: lru(refString, frameCount), optSteps: optimal(refString, frameCount) }
+      : { fifoSteps: [], lruSteps: [], optSteps: [] }
+  ), [parsed, refString, frameCount])
+
+  // Stop the timer when this page is left or a new timer replaces it
+  useEffect(() => () => clearInterval(intervalId), [intervalId])
 
   const maxStep = fifoSteps.length - 1
 
@@ -181,8 +183,6 @@ export default function PageReplacement() {
     setRefInput(p.ref.join(' '))
   }
 
-  const step = cursor >= 0 ? fifoSteps[cursor] : null
-
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -204,8 +204,10 @@ export default function PageReplacement() {
               value={refInput}
               onChange={e => { setRefInput(e.target.value); handleReset() }}
               placeholder="e.g. 7 0 1 2 0 3 0 4"
-              className="w-full bg-os-bg border border-os-border rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-cyan-500"
+              aria-invalid={!parsed.ok}
+              className={`w-full bg-os-bg border rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none ${parsed.ok ? 'border-os-border focus:border-cyan-500' : 'border-red-500'}`}
             />
+            {!parsed.ok && <p role="alert" className="text-[11px] text-red-400">{parsed.error}</p>}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs text-gray-400 font-mono uppercase tracking-widest">Frame Count: {frameCount}</label>
@@ -321,7 +323,7 @@ export default function PageReplacement() {
               Pause
             </button>
           ) : (
-            <button onClick={handlePlay} disabled={cursor >= maxStep}
+            <button onClick={handlePlay} disabled={cursor >= maxStep || !parsed.ok}
               className="px-4 py-1.5 text-sm rounded-lg bg-cyan-600 text-white hover:bg-cyan-500 disabled:opacity-30 transition-colors font-medium">
               ▶ Play
             </button>

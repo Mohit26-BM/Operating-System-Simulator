@@ -1,3 +1,5 @@
+import { runReplacement } from './common'
+
 export const LRU_CODE = [
   'for each page in reference string:',
   '  if page in memory:',
@@ -19,57 +21,21 @@ export const LRU_ANNOTATIONS = {
 }
 
 export function lru(referenceString, frameCount) {
-  const memory = []
-  const tlb = []
-  const steps = []
-
-  for (let i = 0; i < referenceString.length; i++) {
-    const page = referenceString[i]
-    const idx = memory.indexOf(page)
-    const tlbHit = tlb.some(e => e.page === page)
-
-    if (idx !== -1) {
-      memory.splice(idx, 1)
-      memory.push(page)
-      updateTLB(tlb, page, memory.indexOf(page))
-      steps.push({
-        page, memory: [...memory], event: 'hit', evicted: null,
-        tlbHit, pageTable: buildPageTable(memory), tlb: [...tlb],
-        physicalAddress: `Frame ${memory.indexOf(page)}`,
-        highlightLine: 2,
-        explanation: `Page ${page} hit. Moved to most-recently-used position. ${tlbHit ? 'TLB hit.' : 'TLB updated.'}`,
-      })
-    } else {
-      let evicted = null
-      if (memory.length >= frameCount) {
-        evicted = memory.shift()
-        removeTLB(tlb, evicted)
-      }
-      memory.push(page)
-      updateTLB(tlb, page, memory.indexOf(page))
-      steps.push({
-        page, memory: [...memory], event: 'fault', evicted,
-        tlbHit: false, pageTable: buildPageTable(memory), tlb: [...tlb],
-        physicalAddress: null,
-        highlightLine: evicted !== null ? 8 : 6,
-        explanation: evicted !== null
-          ? `Page fault! Evicted Page ${evicted} (least recently used). Loaded Page ${page} as most recent.`
-          : `Page fault! Free frame available. Loaded Page ${page}.`,
-      })
-    }
-  }
-
-  return steps
-}
-
-function buildPageTable(m) { return m.map((page, frame) => ({ page, frame, valid: true })) }
-function updateTLB(tlb, page, frame) {
-  const idx = tlb.findIndex(e => e.page === page)
-  if (idx !== -1) tlb.splice(idx, 1)
-  tlb.unshift({ page, frame })
-  if (tlb.length > 4) tlb.pop()
-}
-function removeTLB(tlb, page) {
-  const idx = tlb.findIndex(e => e.page === page)
-  if (idx !== -1) tlb.splice(idx, 1)
+  return runReplacement(referenceString, frameCount, {
+    onHit(state, page) {
+      state.recent.splice(state.recent.indexOf(page), 1)
+      state.recent.push(page)
+    },
+    onLoad(state, page, evicted) {
+      if (evicted !== null) state.recent.splice(state.recent.indexOf(evicted), 1)
+      state.recent.push(page)
+    },
+    victim: (state) => state.recent[0],
+    lines: { hit: 2, faultEvict: 8, faultFree: 6 },
+    hitText: (page, frame, tlbHit) =>
+      `Page ${page} hit in Frame ${frame}. Marked most-recently-used. ${tlbHit ? 'TLB hit.' : 'TLB updated.'}`,
+    faultText: (page, frame, evicted) => evicted !== null
+      ? `Page fault! Evicted Page ${evicted} (least recently used). Loaded Page ${page} into its Frame ${frame} as most recent.`
+      : `Page fault! Free frame available. Loaded Page ${page} into Frame ${frame}.`,
+  })
 }

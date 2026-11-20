@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 
-export default function NeedMatrix({ result, processes, resources }) {
+export default function NeedMatrix({ result, resources }) {
   if (!result?.need) return null
 
   return (

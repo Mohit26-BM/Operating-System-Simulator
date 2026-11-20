@@ -1,4 +1,4 @@
-﻿import { motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 export default function DiskTrack({ steps, currentStep, maxCylinder = 199 }) {
   if (!steps.length) return null
@@ -8,14 +8,12 @@ export default function DiskTrack({ steps, currentStep, maxCylinder = 199 }) {
   const pct = (v) => `${(v / maxCylinder) * 100}%`
 
   // collect all request positions for dots
-  const allRequests = steps.length > 0
-    ? [...new Set(steps.slice(1).map(s => s.target))]
-    : []
+  const allRequests = [...new Set(steps.slice(1).map(s => s.target).filter(t => t !== null && t !== undefined))]
 
   // build movement path from visible steps
   const path = visible
     .filter(s => s.from !== undefined)
-    .map(s => ({ from: s.from, to: s.head }))
+    .map(s => ({ from: s.from, to: s.head, jump: s.direction === 'jump' }))
 
   return (
     <div className="bg-os-surface border border-os-border rounded-xl p-5 space-y-4">
@@ -41,7 +39,7 @@ export default function DiskTrack({ steps, currentStep, maxCylinder = 199 }) {
         {path.map((seg, i) => {
           const left = Math.min(seg.from, seg.to) / maxCylinder * 100
           const width = Math.abs(seg.from - seg.to) / maxCylinder * 100
-          const isJump = steps[i + 1]?.direction === 'jump'
+          const isJump = seg.jump
           return (
             <motion.div
               key={i}

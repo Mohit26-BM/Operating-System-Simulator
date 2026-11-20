@@ -1,3 +1,5 @@
+import { validateDiskInput } from './sweep'
+
 export const FCFS_DISK_CODE = [
   'service requests in arrival order',
   'for each request in queue:',
@@ -13,7 +15,8 @@ export const FCFS_DISK_ANNOTATIONS = {
   5: 'may cause excessive head movement',
 }
 
-export function fcfs(initialHead, requests) {
+export function fcfs(initialHead, requests, maxCylinder = 199) {
+  validateDiskInput(initialHead, requests, maxCylinder)
   const steps = []
   let head = initialHead
   let total = 0

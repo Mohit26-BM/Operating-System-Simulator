@@ -1,3 +1,5 @@
+import { validateQuantum } from './common'
+
 export const RR_CODE = [
   'enqueue processes arriving at t=0',
   'while queue not empty:',
@@ -18,36 +20,41 @@ export const RR_ANNOTATIONS = {
 }
 
 export function roundRobin(processes, quantum) {
-  const remaining = processes.map(p => ({ ...p, rem: p.burst }))
+  validateQuantum(quantum)
+  const order = processes.map((p, index) => ({ ...p, index, rem: p.burst })).sort((a, b) => a.arrival - b.arrival || a.index - b.index)
   const steps = []
-  let time = 0
   const queue = []
-  const enqueued = new Set()
+  let time = 0
+  let next = 0   // next not-yet-admitted process in arrival order
 
-  remaining.filter(p => p.arrival === 0).forEach(p => { queue.push(p.id); enqueued.add(p.id) })
+  // Processes that have arrived by `until` join the back of the queue (arrivals first, then the preempted process).
+  const admit = (until) => { while (next < order.length && order[next].arrival <= until) queue.push(order[next++].id) }
+  admit(0)
 
-  while (remaining.some(p => p.rem > 0)) {
+  while (queue.length || next < order.length) {
     if (!queue.length) {
-      steps.push({ time, running: null, queue: [], highlightLine: 1, explanation: `Queue empty at t=${time}. Waiting for next arrival.` })
-      time++
-      remaining.filter(p => !enqueued.has(p.id) && p.arrival <= time).forEach(p => { queue.push(p.id); enqueued.add(p.id) })
+      steps.push({ time, running: null, queue: [], idle: true, duration: order[next].arrival - time, highlightLine: 1, explanation: `Queue empty at t=${time}. Waiting for the next arrival (${order[next].id} at t=${order[next].arrival}).` })
+      time = order[next].arrival
+      admit(time)
       continue
     }
 
     const id = queue.shift()
-    const p = remaining.find(x => x.id === id)
+    const p = order.find((x) => x.id === id)
     const slice = Math.min(quantum, p.rem)
+    const before = p.rem
 
     for (let t = 0; t < slice; t++) {
-      remaining.filter(x => !enqueued.has(x.id) && x.arrival <= time + 1).forEach(x => { queue.push(x.id); enqueued.add(x.id) })
+      admit(time + 1)
       steps.push({
         time: time++, running: id, queue: [...queue],
         highlightLine: 3,
-        explanation: `Running ${id} — slice unit ${t + 1}/${slice} (quantum=${quantum}, remaining=${p.rem - t}).`,
+        explanation: `Running ${id} — slice unit ${t + 1}/${slice} (quantum=${quantum}, remaining=${before - t}).`,
       })
     }
 
     p.rem -= slice
+    admit(time)
 
     if (p.rem > 0) {
       queue.push(id)

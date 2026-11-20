@@ -1,10 +1,12 @@
-﻿import { useState, useRef } from 'react'
-import Groq from 'groq-sdk'
+﻿import { useEffect, useRef, useState } from 'react'
 
-const client = new Groq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true,
-})
+// Asks the server (/api/explain) for a short explanation of the current step. The browser never
+// holds an API key: the key lives on the server side of that endpoint.
+
+function stepText(step) {
+  const text = typeof step?.explanation === 'string' ? step.explanation : JSON.stringify(step ?? {})
+  return text.slice(0, 1000)
+}
 
 export default function AIExplainer({ algorithm, step, stepIndex, totalSteps }) {
   const [text, setText] = useState('')
@@ -12,8 +14,11 @@ export default function AIExplainer({ algorithm, step, stepIndex, totalSteps }) 
   const [open, setOpen] = useState(false)
   const abortRef = useRef(null)
 
+  // Stop any in-flight request when the component goes away
+  useEffect(() => () => abortRef.current?.abort(), [])
+
   async function explain() {
-    if (abortRef.current) abortRef.current.abort()
+    abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
 
@@ -22,30 +27,39 @@ export default function AIExplainer({ algorithm, step, stepIndex, totalSteps }) 
     setLoading(true)
 
     try {
-      const stream = await client.chat.completions.create({
-        model: 'openai/gpt-oss-120b',
-        max_tokens: 150,
-        stream: true,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a CS professor explaining OS concepts. Be concise — max 3 sentences. Focus on why this step matters, not just what it does.',
-          },
-          {
-            role: 'user',
-            content: `Algorithm: ${algorithm}. Step ${stepIndex + 1} of ${totalSteps}: ${step?.explanation ?? JSON.stringify(step)}. Explain what is happening and why.`,
-          },
-        ],
-      }, { signal: controller.signal })
+      const res = await fetch('/api/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          algorithm: String(algorithm ?? '').slice(0, 80),
+          stepExplanation: stepText(step),
+          stepIndex: Math.max(0, stepIndex ?? 0),
+          totalSteps: Math.max(1, totalSteps ?? 1),
+        }),
+        signal: controller.signal,
+      })
 
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta?.content ?? ''
-        setText(prev => prev + delta)
+      if (!res.ok || !res.body) {
+        setText(
+          res.status === 429 ? 'Too many requests. Please wait a minute and try again.'
+            : res.status === 503 ? 'The AI explanation is not configured on this server.'
+            : 'The explanation is unavailable right now. Try again in a moment.',
+        )
+        return
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      setLoading(false)
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        setText((prev) => prev + decoder.decode(value, { stream: true }))
       }
     } catch (e) {
-      if (e.name !== 'AbortError') setText('Could not load explanation. Check your VITE_GROQ_API_KEY.')
+      if (e.name !== 'AbortError') setText('Something went wrong. Try again.')
     } finally {
-      setLoading(false)
+      if (abortRef.current === controller) setLoading(false)
     }
   }
 
@@ -71,4 +85,3 @@ export default function AIExplainer({ algorithm, step, stepIndex, totalSteps }) 
     </div>
   )
 }
-

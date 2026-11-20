@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+
+// Whatever is typed becomes a whole number from 0 to 99 (empty or invalid text counts as 0).
+const toCount = (v) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.min(99, Math.max(0, n)) : 0 }
 
 function makeMatrix(r, c) {
   return Array.from({ length: r }, () => new Array(c).fill(0))
@@ -28,8 +31,8 @@ function MatrixInput({ title, rows, cols, matrix, onChange, errorCells = new Set
                   return (
                     <td key={j} className="px-2 py-1.5">
                       <input
-                        type="number" min={0} value={matrix[i]?.[j] ?? 0}
-                        onChange={e => onChange(i, j, +e.target.value)}
+                        type="number" min={0} max={99} value={matrix[i]?.[j] ?? 0}
+                        onChange={e => onChange(i, j, e.target.value)}
                         className={`w-14 border text-white rounded-lg px-2 py-1 text-sm text-center focus:outline-none transition-colors
                           ${hasError
                             ? 'bg-red-500/10 border-red-500 focus:border-red-400'
@@ -54,16 +57,9 @@ export default function BankersTable({ processes, resources, onCheck }) {
   const [available, setAvailable] = useState(() => new Array(resources).fill(0))
   const [errors, setErrors] = useState({ alloc: new Set(), available: [] })
 
-  useEffect(() => {
-    setAllocation(makeMatrix(processes, resources))
-    setMax(makeMatrix(processes, resources))
-    setAvailable(new Array(resources).fill(0))
-    setErrors({ alloc: new Set(), available: [] })
-  }, [processes, resources])
-
   function updateMatrix(setter, matrix, r, c, val) {
     const next = matrix.map(row => [...row])
-    next[r][c] = Math.max(0, val)
+    next[r][c] = toCount(val)
     setter(next)
     setErrors(e => ({ ...e, alloc: new Set() }))
   }
@@ -129,10 +125,10 @@ export default function BankersTable({ processes, resources, onCheck }) {
             <label key={j} className="flex flex-col gap-1">
               <span className="text-xs text-gray-500">R{j}</span>
               <input
-                type="number" min={0} value={v}
+                type="number" min={0} max={99} value={v}
                 onChange={e => {
                   const next = [...available]
-                  next[j] = Math.max(0, +e.target.value)
+                  next[j] = toCount(e.target.value)
                   setAvailable(next)
                   setErrors(err => ({ ...err, available: err.available.filter(x => x !== j) }))
                 }}

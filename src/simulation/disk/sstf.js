@@ -1,3 +1,5 @@
+import { validateDiskInput } from './sweep'
+
 export const SSTF_CODE = [
   'while requests remain:',
   '  find request nearest to current head',
@@ -12,7 +14,8 @@ export const SSTF_ANNOTATIONS = {
   3: 'can cause starvation of far requests',
 }
 
-export function sstf(initialHead, requests) {
+export function sstf(initialHead, requests, maxCylinder = 199) {
+  validateDiskInput(initialHead, requests, maxCylinder)
   const steps = []
   let head = initialHead
   let total = 0

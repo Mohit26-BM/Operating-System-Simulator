@@ -1,4 +1,4 @@
-﻿import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function ProcessTable({ processes, step }) {
   if (!processes.length) return null
@@ -12,6 +12,7 @@ export default function ProcessTable({ processes, step }) {
             <th className="px-4 py-2 text-left">Arrival</th>
             <th className="px-4 py-2 text-left">Burst</th>
             <th className="px-4 py-2 text-left">Priority</th>
+            <th className="px-4 py-2 text-left">I/O</th>
             <th className="px-4 py-2 text-left">Status</th>
           </tr>
         </thead>
@@ -20,6 +21,7 @@ export default function ProcessTable({ processes, step }) {
             {processes.map(p => {
               const isRunning = step?.running === p.id
               const isReady = step?.queue?.includes(p.id)
+              const isBlocked = step?.blocked?.includes(p.id)
               return (
                 <motion.tr
                   key={p.id}
@@ -31,9 +33,12 @@ export default function ProcessTable({ processes, step }) {
                   <td className="px-4 py-2 text-gray-300">{p.arrival}</td>
                   <td className="px-4 py-2 text-gray-300">{p.burst}</td>
                   <td className="px-4 py-2 text-gray-300">{p.priority}</td>
+                  <td className="px-4 py-2 text-gray-500 font-mono text-xs">{p.io?.length ? p.io.map(e => `${e.at}:${e.duration}`).join(' ') : '—'}</td>
                   <td className="px-4 py-2">
                     {isRunning ? (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-medium">Running</span>
+                    ) : isBlocked ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-medium">I/O</span>
                     ) : isReady ? (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-medium">Ready</span>
                     ) : (

@@ -8,10 +8,11 @@ import Controls from '../components/shared/Controls'
 import AIExplainer from '../components/shared/AIExplainer'
 import SimHelp from '../components/shared/SimHelp'
 import { usePlayer } from '../hooks/usePlayer'
-import { runScheduling, getCode, getAnnotations } from '../simulation/scheduling'
+import { runScheduling, getCode, getAnnotations, SCHEDULING_ALGORITHMS } from '../simulation/scheduling'
+import { parseInteger, parseIntegerList } from '../simulation/parse'
 import MetricsPanel from '../components/scheduling/MetricsPanel'
 
-const ALGORITHMS = ['FCFS', 'SJF', 'Round Robin', 'Priority']
+const ALGORITHMS = SCHEDULING_ALGORITHMS
 
 const HELP = {
   title: 'CPU Scheduling',
@@ -24,7 +25,7 @@ const HELP = {
       heading: 'Step by step',
       items: [
         { icon: '1️⃣', label: 'Add processes', text: 'Fill in Arrival Time, Burst Time, and Priority, then click + Add. Add 2–8 processes.' },
-        { icon: '2️⃣', label: 'Pick algorithm', text: 'FCFS, SJF, Round Robin, or Priority. For Round Robin, set the quantum (time slice).' },
+        { icon: '2️⃣', label: 'Pick algorithm', text: 'FCFS, SJF, SRTF (preemptive SJF), Round Robin, Priority, preemptive Priority (with optional aging) or a multilevel feedback queue (MLFQ). Round Robin and MLFQ have time quanta.' },
         { icon: '3️⃣', label: 'Run Simulation', text: 'Generates a step-by-step schedule.' },
         { icon: '▶',   label: 'Play / Step',   text: 'Watch the Gantt chart build. Use Next → to step manually.' },
       ],
@@ -34,7 +35,8 @@ const HELP = {
       items: [
         { icon: '⏱', label: 'Arrival Time', text: 'When the process enters the ready queue (≥ 0). Use 0 for all to simulate simultaneous arrival.' },
         { icon: '⚡', label: 'Burst Time',   text: 'Total CPU time the process needs (≥ 1). Shorter bursts matter most for SJF.' },
-        { icon: '⭐', label: 'Priority',     text: 'Used only by Priority scheduling. Lower number = higher priority.' },
+        { icon: '⭐', label: 'Priority',     text: 'Used only by the Priority algorithms. Lower number = higher priority.' },
+        { icon: '💾', label: 'I/O (optional)', text: 'Write AFTER:DURATION pairs, for example 2:3 4:1. After 2 CPU units the process leaves the CPU for 3 units of I/O, then returns to the back of the ready queue. While it waits, another process can use the CPU.' },
         { icon: '⏲', label: 'Quantum',      text: 'Round Robin only. How many time units each process runs before being preempted (≥ 1).' },
       ],
     },
@@ -54,12 +56,16 @@ export default function Scheduling() {
   const [algorithm, setAlgorithm] = useState('FCFS')
   const [quantum, setQuantum] = useState(2)
   const [quantumError, setQuantumError] = useState('')
+  const [quantaText, setQuantaText] = useState('2 4 8')
+  const [agingText, setAgingText] = useState('0')
+  const [boostText, setBoostText] = useState('0')
   const [runError, setRunError] = useState('')
   const { steps, currentStep, playing, speed, play, pause, stepForward, stepBack, reset, changeSpeed } = usePlayer()
 
   const step = steps[currentStep] ?? null
-  const code = getCode(algorithm)
-  const annotations = getAnnotations(algorithm)
+  const withIo = processes.some(p => p.io?.length)
+  const code = getCode(algorithm, withIo)
+  const annotations = getAnnotations(algorithm, withIo)
 
   function handleRun() {
     setRunError('')
@@ -67,7 +73,25 @@ export default function Scheduling() {
     if (algorithm === 'Round Robin' && (quantum < 1 || !Number.isInteger(quantum))) {
       setQuantumError('Quantum must be a whole number ≥ 1'); return
     }
-    reset(runScheduling(processes, algorithm, quantum))
+    const options = {}
+    if (algorithm === 'MLFQ') {
+      const q = parseIntegerList(quantaText, { min: 1, max: 50, minCount: 2, maxCount: 5, label: 'Queue quanta' })
+      if (!q.ok) { setRunError(q.error); return }
+      const b = parseInteger(boostText, { min: 0, max: 1000, label: 'Boost interval' })
+      if (!b.ok) { setRunError(b.error); return }
+      options.quanta = q.values
+      options.boost = b.value
+    }
+    if (algorithm === 'Priority (Preemptive)') {
+      const a = parseInteger(agingText, { min: 0, max: 1000, label: 'Aging interval' })
+      if (!a.ok) { setRunError(a.error); return }
+      options.aging = a.value
+    }
+    try {
+      reset(runScheduling(processes, algorithm, quantum, options))
+    } catch (err) {
+      setRunError(err.message)
+    }
   }
 
   function handleQuantumChange(val) {
@@ -109,6 +133,27 @@ export default function Scheduling() {
             {algo}
           </button>
         ))}
+        {algorithm === 'MLFQ' && (
+          <div className="flex items-end gap-3 ml-4 flex-wrap">
+            <label className="flex flex-col gap-0.5">
+              <span className="text-xs text-gray-500">Quantum per queue (Q0 first)</span>
+              <input value={quantaText} onChange={e => setQuantaText(e.target.value)}
+                className="w-28 bg-os-surface border border-os-border text-white rounded-lg px-2 py-1 text-sm font-mono focus:outline-none focus:border-cyan-500" />
+            </label>
+            <label className="flex flex-col gap-0.5">
+              <span className="text-xs text-gray-500">Boost every (0 = off)</span>
+              <input value={boostText} onChange={e => setBoostText(e.target.value)}
+                className="w-20 bg-os-surface border border-os-border text-white rounded-lg px-2 py-1 text-sm font-mono focus:outline-none focus:border-cyan-500" />
+            </label>
+          </div>
+        )}
+        {algorithm === 'Priority (Preemptive)' && (
+          <label className="flex flex-col gap-0.5 ml-4">
+            <span className="text-xs text-gray-500">Aging: improve priority every N waiting units (0 = off)</span>
+            <input value={agingText} onChange={e => setAgingText(e.target.value)}
+              className="w-20 bg-os-surface border border-os-border text-white rounded-lg px-2 py-1 text-sm font-mono focus:outline-none focus:border-cyan-500" />
+          </label>
+        )}
         {algorithm === 'Round Robin' && (
           <div className="flex items-center gap-2 ml-4">
             <span className="text-sm text-gray-400">Quantum</span>
@@ -202,6 +247,7 @@ export default function Scheduling() {
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-cyan-500 inline-block" /> Running</div>
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-amber-500 inline-block" /> Ready queue</div>
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-gray-700 inline-block" /> Idle</div>
+            <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-rose-500 inline-block" /> Waiting for I/O</div>
             <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" /> Completed</div>
           </div>
         </div>

@@ -1,3 +1,5 @@
+import { readyList } from './common'
+
 export const FCFS_CODE = [
   'sort processes by arrival time',
   'for each process in order:',
@@ -20,12 +22,13 @@ export const FCFS_ANNOTATIONS = {
 export function fcfs(processes) {
   const sorted = [...processes].sort((a, b) => a.arrival - b.arrival)
   const steps = []
+  const done = new Set()
   let time = 0
 
   for (const p of sorted) {
     if (time < p.arrival) {
       steps.push({
-        time, running: null, queue: [],
+        time, running: null, queue: [], idle: true, duration: p.arrival - time,
         highlightLine: 2,
         explanation: `CPU is idle. Waiting for ${p.id} to arrive at t=${p.arrival}.`,
       })
@@ -34,7 +37,7 @@ export function fcfs(processes) {
 
     const start = time
     steps.push({
-      time, running: p.id, queue: sorted.filter(x => x.arrival <= time && x.id !== p.id).map(x => x.id),
+      time, running: p.id, queue: readyList(sorted, done, time, p.id),
       highlightLine: 4,
       explanation: `Starting ${p.id} at t=${start}. It arrived at t=${p.arrival} so waited ${start - p.arrival} unit(s).`,
     })
@@ -42,15 +45,16 @@ export function fcfs(processes) {
     for (let t = 1; t < p.burst; t++) {
       steps.push({
         time: time + t, running: p.id,
-        queue: sorted.filter(x => x.arrival <= time + t && x.id !== p.id).map(x => x.id),
+        queue: readyList(sorted, done, time + t, p.id),
         highlightLine: 5,
         explanation: `Running ${p.id} — ${p.burst - t} burst unit(s) remaining. FCFS never preempts.`,
       })
     }
 
     time += p.burst
+    done.add(p.id)
     steps.push({
-      time, running: null, queue: sorted.filter(x => x.arrival <= time && !steps.find(s => s.completed === x.id)).map(x => x.id),
+      time, running: null, queue: readyList(sorted, done, time),
       completed: p.id,
       turnaround: time - p.arrival,
       waiting: start - p.arrival,

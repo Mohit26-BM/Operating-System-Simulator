@@ -22,109 +22,70 @@ export const PC_ANNOTATIONS = {
   12: 'wakes a blocked producer',
 }
 
-export function simulateProducerConsumer(bufferSize = 5, steps = 10) {
+export const MAX_BUFFER = 8
+export const MAX_OPERATIONS = 30
+
+/**
+ * Bounded buffer with counting semaphores. Each attempt, either the producer or the consumer runs.
+ * If its semaphore is 0 it blocks (the step says so) instead of silently doing nothing.
+ *   rng: () => number in [0, 1), injectable so runs can be reproduced.
+ */
+export function simulateProducerConsumer(bufferSize = 5, attempts = 10, rng = Math.random) {
+  if (!Number.isInteger(bufferSize) || bufferSize < 1 || bufferSize > MAX_BUFFER) throw new Error(`Buffer size must be a whole number from 1 to ${MAX_BUFFER}`)
+  if (!Number.isInteger(attempts) || attempts < 1 || attempts > MAX_OPERATIONS) throw new Error(`Operations must be a whole number from 1 to ${MAX_OPERATIONS}`)
+
   const result = []
-  let buffer = []
+  const buffer = []
   let empty = bufferSize
   let full = 0
   let mutex = 1
+  let itemId = 1
+
+  const push = (attempt, actor, action, line, explanation, extra = {}) =>
+    result.push({ buffer: [...buffer], empty, full, mutex, actor, action, attempt, highlightLine: line, explanation, ...extra })
 
   result.push({
-    buffer: [], empty, full, mutex,
-    actor: null, action: 'init',
-    highlightLine: 0,
+    buffer: [], empty, full, mutex, actor: null, action: 'init', highlightLine: 0,
     explanation: `Buffer size = ${bufferSize}. Semaphores: empty=${bufferSize} (free slots), full=0 (items ready), mutex=1 (unlocked).`,
   })
 
-  let itemId = 1
-  for (let i = 0; i < steps; i++) {
-    const isProducer = Math.random() > 0.4 || full === 0
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const producer = rng() < 0.55
 
-    if (isProducer && empty > 0) {
-      // wait(empty)
+    if (producer) {
+      if (empty === 0) {
+        push(attempt, 'producer', 'wait(empty)', 2,
+          `Producer calls wait(empty), but empty is 0: the buffer is full. The producer BLOCKS (sleeps) until a consumer frees a slot.`, { blocked: true })
+        continue
+      }
       empty--
-      result.push({
-        buffer: [...buffer], empty, full, mutex: 0,
-        actor: 'producer', action: 'wait(empty)',
-        highlightLine: 2,
-        explanation: `Producer calls wait(empty). empty: ${empty + 1} → ${empty}. Buffer has room — producer proceeds.`,
-      })
-      // wait(mutex)
+      push(attempt, 'producer', 'wait(empty)', 2, `Producer calls wait(empty). empty: ${empty + 1} → ${empty}. A slot is reserved, so the producer proceeds.`)
       mutex = 0
-      result.push({
-        buffer: [...buffer], empty, full, mutex,
-        actor: 'producer', action: 'wait(mutex)',
-        highlightLine: 3,
-        explanation: `Producer acquires mutex (mutex: 1 → 0). Critical section entered. Consumer must wait.`,
-      })
-      // produce
+      push(attempt, 'producer', 'wait(mutex)', 3, `Producer acquires mutex (mutex: 1 → 0). Critical section entered; the consumer would have to wait.`)
       const item = `P${itemId++}`
       buffer.push(item)
-      result.push({
-        buffer: [...buffer], empty, full, mutex,
-        actor: 'producer', action: `add(${item})`,
-        highlightLine: 4,
-        explanation: `Producer adds item "${item}" to buffer. Buffer now has ${buffer.length} item(s).`,
-      })
-      // signal(mutex)
+      push(attempt, 'producer', `add(${item})`, 4, `Producer adds item "${item}" to the buffer. The buffer now holds ${buffer.length} item(s).`)
       mutex = 1
-      result.push({
-        buffer: [...buffer], empty, full, mutex,
-        actor: 'producer', action: 'signal(mutex)',
-        highlightLine: 5,
-        explanation: `Producer releases mutex (mutex: 0 → 1). Critical section exited.`,
-      })
-      // signal(full)
+      push(attempt, 'producer', 'signal(mutex)', 5, `Producer releases mutex (mutex: 0 → 1). Critical section exited.`)
       full++
-      result.push({
-        buffer: [...buffer], empty, full, mutex,
-        actor: 'producer', action: 'signal(full)',
-        highlightLine: 6,
-        explanation: `Producer signals full (full: ${full - 1} → ${full}). Consumer can now consume if it was waiting.`,
-      })
-    } else if (!isProducer && full > 0) {
-      // wait(full)
+      push(attempt, 'producer', 'signal(full)', 6, `Producer signals full (full: ${full - 1} → ${full}). A waiting consumer can now proceed.`)
+    } else {
+      if (full === 0) {
+        push(attempt, 'consumer', 'wait(full)', 8,
+          `Consumer calls wait(full), but full is 0: the buffer is empty. The consumer BLOCKS (sleeps) until a producer adds an item.`, { blocked: true })
+        continue
+      }
       full--
-      result.push({
-        buffer: [...buffer], empty, full, mutex: 0,
-        actor: 'consumer', action: 'wait(full)',
-        highlightLine: 8,
-        explanation: `Consumer calls wait(full). full: ${full + 1} → ${full}. Buffer has items — consumer proceeds.`,
-      })
-      // wait(mutex)
+      push(attempt, 'consumer', 'wait(full)', 8, `Consumer calls wait(full). full: ${full + 1} → ${full}. An item is reserved, so the consumer proceeds.`)
       mutex = 0
-      result.push({
-        buffer: [...buffer], empty, full, mutex,
-        actor: 'consumer', action: 'wait(mutex)',
-        highlightLine: 9,
-        explanation: `Consumer acquires mutex (mutex: 1 → 0). Critical section entered.`,
-      })
-      // consume
+      push(attempt, 'consumer', 'wait(mutex)', 9, `Consumer acquires mutex (mutex: 1 → 0). Critical section entered.`)
       const item = buffer.shift()
-      result.push({
-        buffer: [...buffer], empty, full, mutex,
-        actor: 'consumer', action: `remove(${item})`,
-        highlightLine: 10,
-        explanation: `Consumer removes "${item}" from buffer. Buffer now has ${buffer.length} item(s).`,
-      })
-      // signal(mutex)
+      push(attempt, 'consumer', `remove(${item})`, 10, `Consumer removes "${item}" from the buffer (first in, first out). The buffer now holds ${buffer.length} item(s).`)
       mutex = 1
-      result.push({
-        buffer: [...buffer], empty, full, mutex,
-        actor: 'consumer', action: 'signal(mutex)',
-        highlightLine: 11,
-        explanation: `Consumer releases mutex (mutex: 0 → 1). Critical section exited.`,
-      })
-      // signal(empty)
+      push(attempt, 'consumer', 'signal(mutex)', 11, `Consumer releases mutex (mutex: 0 → 1). Critical section exited.`)
       empty++
-      result.push({
-        buffer: [...buffer], empty, full, mutex,
-        actor: 'consumer', action: 'signal(empty)',
-        highlightLine: 12,
-        explanation: `Consumer signals empty (empty: ${empty - 1} → ${empty}). Producer can now produce if it was waiting.`,
-      })
+      push(attempt, 'consumer', 'signal(empty)', 12, `Consumer signals empty (empty: ${empty - 1} → ${empty}). A waiting producer can now proceed.`)
     }
   }
-
   return result
 }

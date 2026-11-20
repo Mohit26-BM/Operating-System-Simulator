@@ -18,4 +18,9 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    // Server-side and tooling files run in Node, not the browser
+    files: ['api/**/*.js', 'vite.config.js', 'vitest.config.js', 'tests/**/*.js'],
+    languageOptions: { globals: globals.node },
+  },
 ])

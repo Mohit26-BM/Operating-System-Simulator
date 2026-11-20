@@ -1,3 +1,5 @@
+import { runReplacement } from './common'
+
 export const OPTIMAL_CODE = [
   'for each page in reference string:',
   '  if page in memory: HIT',
@@ -18,67 +20,32 @@ export const OPTIMAL_ANNOTATIONS = {
   8: 'theoretical minimum fault count',
 }
 
+function nextUse(refs, page, from) {
+  const next = refs.indexOf(page, from)
+  return next === -1 ? Infinity : next
+}
+
 export function optimal(referenceString, frameCount) {
-  const memory = []
-  const tlb = []
-  const steps = []
-
-  for (let i = 0; i < referenceString.length; i++) {
-    const page = referenceString[i]
-    const idx = memory.indexOf(page)
-    const tlbHit = tlb.some(e => e.page === page)
-
-    if (idx !== -1) {
-      updateTLB(tlb, page, idx)
-      steps.push({
-        page, memory: [...memory], event: 'hit', evicted: null,
-        tlbHit, pageTable: buildPageTable(memory), tlb: [...tlb],
-        physicalAddress: `Frame ${idx}`,
-        highlightLine: 1,
-        explanation: `Page ${page} is in memory. Hit! ${tlbHit ? 'TLB hit.' : 'TLB updated.'}`,
-      })
-    } else {
-      let evicted = null
-      if (memory.length >= frameCount) {
-        evicted = getOptimalEvict(memory, referenceString, i)
-        memory.splice(memory.indexOf(evicted), 1)
-        removeTLB(tlb, evicted)
+  return runReplacement(referenceString, frameCount, {
+    onHit() {},
+    onLoad() {},
+    // Evict the resident page whose next use is farthest away (never used again wins; ties go to the lowest frame).
+    victim(state, index) {
+      let best = null, bestDist = -1
+      for (const page of state.memory) {
+        if (page === null) continue
+        const d = nextUse(state.refs, page, index + 1)
+        if (d > bestDist) { best = page; bestDist = d }
       }
-      memory.push(page)
-      updateTLB(tlb, page, memory.indexOf(page))
-      const nextUse = referenceString.indexOf(page, i + 1)
-      steps.push({
-        page, memory: [...memory], event: 'fault', evicted,
-        tlbHit: false, pageTable: buildPageTable(memory), tlb: [...tlb],
-        physicalAddress: null,
-        highlightLine: evicted !== null ? 8 : 4,
-        explanation: evicted !== null
-          ? `Page fault! Optimal evicts Page ${evicted} (next used at index ${referenceString.indexOf(evicted, i + 1) === -1 ? 'never' : referenceString.indexOf(evicted, i + 1)}). Page ${page} next used at ${nextUse === -1 ? 'never' : nextUse}.`
-          : `Page fault! Free frame available. Loaded Page ${page}.`,
-      })
-    }
-  }
-
-  return steps
-}
-
-function getOptimalEvict(memory, ref, currentIndex) {
-  let farthest = -1, evict = memory[0]
-  for (const page of memory) {
-    const next = ref.indexOf(page, currentIndex + 1)
-    const dist = next === -1 ? Infinity : next
-    if (dist > farthest) { farthest = dist; evict = page }
-  }
-  return evict
-}
-function buildPageTable(m) { return m.map((page, frame) => ({ page, frame, valid: true })) }
-function updateTLB(tlb, page, frame) {
-  const idx = tlb.findIndex(e => e.page === page)
-  if (idx !== -1) tlb.splice(idx, 1)
-  tlb.unshift({ page, frame })
-  if (tlb.length > 4) tlb.pop()
-}
-function removeTLB(tlb, page) {
-  const idx = tlb.findIndex(e => e.page === page)
-  if (idx !== -1) tlb.splice(idx, 1)
+      return best
+    },
+    lines: { hit: 1, faultEvict: 8, faultFree: 4 },
+    hitText: (page, frame, tlbHit) => `Page ${page} is in Frame ${frame}. Hit! ${tlbHit ? 'TLB hit.' : 'TLB updated.'}`,
+    faultText: (page, frame, evicted, i, refs) => {
+      if (evicted === null) return `Page fault! Free frame available. Loaded Page ${page} into Frame ${frame}.`
+      const d = nextUse(refs, evicted, i + 1)
+      const n = nextUse(refs, page, i + 1)
+      return `Page fault! Optimal evicts Page ${evicted} (next used at index ${d === Infinity ? 'never' : d}) and reuses its Frame ${frame}. Page ${page} next used at ${n === Infinity ? 'never' : n}.`
+    },
+  })
 }

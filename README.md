@@ -13,7 +13,7 @@ An interactive simulator for core Operating Systems concepts, built with **Vite 
 | Styling | Tailwind CSS v4 (CSS `@theme`) | 4 |
 | Animation | Framer Motion | 12 |
 | Routing | React Router | 7 |
-| AI explanations | Groq SDK (`llama-3` via API) | 1 |
+| AI explanations | Groq SDK, called from a server-side function (`/api/explain`), model `openai/gpt-oss-120b` | 1 |
 
 ---
 
@@ -29,12 +29,13 @@ src/
 │   ├── disk/           # DiskTrack
 │   └── deadlock/       # BankersTable, NeedMatrix
 ├── simulation/         # Pure JS step engines (no React)
-│   ├── scheduling/     # fcfs, sjf, roundRobin, priority
+│   ├── scheduling/     # fcfs, sjf, roundRobin, priority, advanced (SRTF, preemptive priority, MLFQ, I/O), metrics
 │   ├── paging/         # fifo, lru, optimal
-│   ├── disk/           # fcfs, sstf, scan, cscan
+│   ├── disk/           # fcfs, sstf, sweep (SCAN, C-SCAN, LOOK, C-LOOK)
 │   ├── concurrency/    # producerConsumer, diningPhilosophers, synchronization
 │   ├── process/        # processState
 │   ├── deadlock/       # banker
+│   ├── memory/         # dynamic (First/Best/Worst/Next Fit), buddy
 │   └── memoryAllocation.js
 └── hooks/
     └── usePlayer.js    # Shared playback engine
@@ -79,7 +80,7 @@ Side panel  ←  CodePanel (pseudocode with line highlight)
 
 ### CPU Scheduling — `/scheduling`
 
-**Engine:** `src/simulation/scheduling/index.js` dispatches to `fcfs`, `sjf`, `roundRobin`, `priority`. Each function returns steps carrying `{ time, running, queue, gantt[], highlightLine, explanation }`.
+**Engine:** `src/simulation/scheduling/index.js` runs seven algorithms: FCFS, SJF, Round Robin and non-preemptive Priority (their own small engines), plus **SRTF**, **preemptive Priority** (with optional aging) and a **multilevel feedback queue** (MLFQ, with per-queue quanta and an optional priority boost). The preemptive algorithms, and any run where a process does I/O, use one unit-time engine (`advanced.js`). Processes can alternate CPU and I/O: write `2:3` in the I/O field and the process leaves the CPU for 3 units after 2 units of CPU, then rejoins the back of the ready queue. Steps carry `{ time, running, queue, blocked[], level?, event?, highlightLine, explanation }`; waiting time counts only time spent ready, not time spent in I/O.
 
 **Visualizer:** `GanttChart` renders a growing colored block chart — each step appends or extends a block. `ProcessTable` colors rows by state (waiting / running / done). `MetricsPanel` computes turnaround, wait, and response time at the final step by walking the completed step array.
 
@@ -113,7 +114,7 @@ Side panel  ←  CodePanel (pseudocode with line highlight)
 
 ### Dining Philosophers — `/dining-philosophers`
 
-**Engine:** `src/simulation/concurrency/diningPhilosophers.js` — `simulateDining(rounds)` uses a resource-hierarchy solution. Steps carry `{ states[5], forks[5], actor, explanation, highlightLine }`.
+**Engine:** `src/simulation/concurrency/diningPhilosophers.js` — `simulateDining({ strategy, rounds, schedule })` supports three strategies: **naive** (left fork then right, which can deadlock), **resource ordering** (lower-numbered fork first) and **both-or-none**. A "worst-case timing" option makes every philosopher hungry at once, which deadlocks the naive strategy; the deadlock is detected and explained. Steps carry `{ states[5], forks[5], holders[5], meals[5], actor, explanation, highlightLine, deadlock? }`.
 
 **Visualizer:** A circular SVG. Philosopher positions use `polarToCart(angle, r)` with angle `= (i × 360/5) − 90°`; forks are placed at the midpoint angle between each pair. Fork circles animate `fill` color when `forks[i]` is truthy. The active philosopher's circle radius expands with `motion.circle animate={{ r: isActor ? 24 : 22 }}`. A state table below shows all five philosophers each step.
 
@@ -135,6 +136,10 @@ Side panel  ←  CodePanel (pseudocode with line highlight)
 
 ---
 
+### Dynamic Allocation — `/dynamic-memory`
+
+**Engine:** `src/simulation/memory/dynamic.js` simulates a real allocator over a list of operations (`A 100`, `free A`, `compact`): a request is carved out of a hole and the rest stays free (splitting), a freed block merges with free neighbours (coalescing), and external fragmentation builds up until compaction. Strategies: First, Best, Worst and Next Fit. `buddy.js` is the buddy allocator used inside the Linux kernel: requests round up to powers of two, larger blocks split in halves, and freed buddies merge back (it reports internal fragmentation). Every step carries the full memory map plus statistics (free memory, largest hole, external fragmentation).
+
 ### Memory Allocation — `/memory-allocation`
 
 **Engine:** `src/simulation/memoryAllocation.js` — `runMemoryAllocation(blocks, requests)` runs all three strategies in one call and returns `{ firstFit: steps[], bestFit: steps[], worstFit: steps[] }`. Each step: `{ reqSize, blocks[], chosenIdx, highlight[], result, explanation, why, highlightLine }`.
@@ -145,7 +150,7 @@ Side panel  ←  CodePanel (pseudocode with line highlight)
 
 ### Deadlock — Banker's Algorithm — `/deadlock`
 
-**Engine:** `src/simulation/deadlock/banker.js` — `runBankers({ allocation, max, available, processes, resources })` computes `Need = Max − Allocation` and runs the safety algorithm to find a safe sequence. Returns `{ safe, sequence, need[][], work[] }`.
+**Engine:** `src/simulation/deadlock/banker.js` — `runBankers({ allocation, max, available, processes, resources })` computes `Need = Max − Allocation` and runs the safety algorithm to find a safe sequence. Returns `{ safe, sequence, need[][], trace[], stuck[] }`, where `trace` shows the available vector growing as each process finishes. `requestResources(input, pid, request)` implements the resource-request algorithm (grant only if the state stays safe).
 
 **Visualizer:** `BankersTable` owns all matrix state (Allocation, Maximum, Available inputs). On "Check Safety", it validates `allocation[i][j] ≤ max[i][j]` for every cell — invalid cells highlight red with a tooltip. `NeedMatrix` renders the computed Need matrix from the result object. A colored `motion.div` banner shows the safe sequence or an unsafe warning.
 
@@ -153,7 +158,7 @@ Side panel  ←  CodePanel (pseudocode with line highlight)
 
 ### Disk Scheduling — `/disk`
 
-**Engine:** `src/simulation/disk/` — four separate files (`fcfs`, `sstf`, `scan`, `cscan`), each returning steps with `{ position, total, visited[], explanation, highlightLine }`.
+**Engine:** `src/simulation/disk/` — FCFS, SSTF and four sweeping algorithms built on one engine (`sweep.js`): **SCAN** (runs to the disk edge, then reverses), **C-SCAN** (edge, wrap-around jump, same direction), **LOOK** and **C-LOOK** (turn at the last request instead of the edge). The first direction is selectable and the wrap-around jump is counted in the total. Steps carry `{ head, from, target, movement, total, remaining, serviced, direction, explanation, highlightLine }`.
 
 **Visualizer:** `DiskTrack` draws a horizontal cylinder ruler. The head path is built as an SVG `<polyline>` that grows by one segment per step. Total seek distance accumulates in a stat chip. Validation enforces head position 0–199 and all request values 0–199.
 
@@ -181,7 +186,7 @@ Renders pseudocode as a numbered line list. The line at index `highlightLine` ge
 
 ### `AIExplainer` — `src/components/shared/AIExplainer.jsx`
 
-On demand, calls `groq-sdk` with the current step's context (algorithm name, step explanation, step index / total). API key from `import.meta.env.VITE_GROQ_API_KEY` (`.env.local`, never committed). Streams the response into a `<p>` rendered below the step explanation.
+On demand, posts the current step's text to `/api/explain` and streams the answer into a `<p>` below the step explanation. The Groq key lives only on the server side of that endpoint (`api/explain.js`, a Vercel function; the Vite dev and preview servers serve the same handler). The browser never sees the key. The endpoint accepts same-origin JSON only, validates every field, and rate limits visitors.
 
 ### `Controls` — `src/components/shared/Controls.jsx`
 
@@ -202,13 +207,14 @@ Reusable transport bar. Renders a progress indicator, Back / Play / Pause / Forw
 /dining-philosophers  → Dining Philosophers
 /paging               → Memory & Paging
 /page-replacement     → Page Replacement
-/memory-allocation    → Memory Allocation
+/memory-allocation    → Memory Allocation (fixed partitions)
+/dynamic-memory       → Dynamic Allocation (splitting, coalescing, buddy)
 /disk                 → Disk Scheduling
 /threads-vs-processes → Threads vs Processes
 /deadlock             → Deadlock (Banker's Algorithm)
 ```
 
-The `<Navbar>` groups all 11 routes into three dropdown menus — **CPU & Process**, **Concurrency**, **Memory** — to fit within the header without overflow.
+The `<Navbar>` groups all 12 routes into three dropdown menus — **CPU & Process**, **Concurrency**, **Memory** — to fit within the header without overflow.
 
 ---
 
@@ -241,8 +247,14 @@ npm run build     # production build → dist/
 npm run preview   # serve dist/ locally
 ```
 
-`.env.local` (not committed — required for AI explanations):
+`.env.local` (not committed; only needed for the "Explain this step" panel):
 
 ```env
-VITE_GROQ_API_KEY=your_key_here
+GROQ_API_KEY=your_key_here
 ```
+
+Use exactly `GROQ_API_KEY`. Never name it with a `VITE_` prefix: Vite copies every `VITE_` variable into the public JavaScript bundle. See `.env.example` for the optional settings (`GROQ_MODEL`, `EXPLAIN_RATE_PER_MIN`, `EXPLAIN_GLOBAL_PER_MIN`, `TRUSTED_PROXY_HOPS`).
+
+### Deploying on Vercel
+
+The repository includes `vercel.json` (single-page-app rewrites, security headers, a 30 s limit for the AI function). Set `GROQ_API_KEY` and `TRUSTED_PROXY_HOPS=1` in the project's environment variables. Without a key everything works except the AI panel.

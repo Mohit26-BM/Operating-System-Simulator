@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePlayer } from '../hooks/usePlayer'
 import CodePanel from '../components/shared/CodePanel'
@@ -6,7 +6,7 @@ import Controls from '../components/shared/Controls'
 import AIExplainer from '../components/shared/AIExplainer'
 import SimHelp from '../components/shared/SimHelp'
 import {
-  simulateDining, DINING_CODE, DINING_ANNOTATIONS, PHIL_COLOR,
+  simulateDining, getDiningCode, DINING_STRATEGIES, DINING_ANNOTATIONS, PHIL_COLOR,
 } from '../simulation/concurrency/diningPhilosophers'
 
 const HELP = {
@@ -56,11 +56,13 @@ function forkAngle(i) { return ((i + 0.5) * 360) / N - 90 }
 
 export default function DiningPhilosophers() {
   const [rounds, setRounds] = useState(16)
+  const [strategy, setStrategy] = useState('naive')
+  const [worstCase, setWorstCase] = useState(false)
   const { steps, currentStep, playing, speed, play, pause, stepForward, stepBack, reset, changeSpeed } = usePlayer()
   const step = steps[currentStep] ?? null
 
   function handleRun() {
-    reset(simulateDining(rounds))
+    reset(simulateDining({ strategy, rounds, schedule: worstCase ? 'worst-case' : 'random' }))
   }
 
   return (
@@ -73,6 +75,23 @@ export default function DiningPhilosophers() {
           </p>
         </div>
         <SimHelp title={HELP.title} sections={HELP.sections} />
+      </div>
+
+      {/* Strategy */}
+      <div className="bg-os-surface border border-os-border rounded-xl p-4 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(DINING_STRATEGIES).map(([key, m]) => (
+            <button key={key} onClick={() => { setStrategy(key); reset([]) }} aria-pressed={strategy === key}
+              className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${strategy === key ? 'bg-amber-500/15 border-amber-500/50 text-amber-200' : 'border-os-border text-gray-400 hover:text-white'}`}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500">{DINING_STRATEGIES[strategy].description}</p>
+        <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+          <input type="checkbox" checked={worstCase} onChange={e => { setWorstCase(e.target.checked); reset([]) }} className="accent-amber-500" />
+          Worst-case timing (all five philosophers get hungry together and move in turn)
+        </label>
       </div>
 
       {/* Config */}
@@ -176,15 +195,15 @@ export default function DiningPhilosophers() {
                     const right = step.forks[(i + 1) % N]
                     return (
                       <tr key={i} className={`border-b border-os-border/40 ${step.actor === i ? 'bg-white/5' : ''}`}>
-                        <td className="px-4 py-1.5 font-mono text-gray-300">P{i}</td>
+                        <td className="px-4 py-1.5 font-mono text-gray-300">P{i} <span className="text-gray-600 text-[10px]">({step.meals[i]} meals)</span></td>
                         <td className="px-4 py-1.5">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PHIL_COLOR[state]}`}>{state}</span>
                         </td>
                         <td className={`px-4 py-1.5 text-xs font-mono ${left ? 'text-cyan-400' : 'text-gray-600'}`}>
-                          F{i} {left ? '(held)' : '(free)'}
+                          F{i} {left ? `(held by P${step.holders[i]})` : '(free)'}
                         </td>
                         <td className={`px-4 py-1.5 text-xs font-mono ${right ? 'text-cyan-400' : 'text-gray-600'}`}>
-                          F{(i + 1) % N} {right ? '(held)' : '(free)'}
+                          F{(i + 1) % N} {right ? `(held by P${step.holders[(i + 1) % N]})` : '(free)'}
                         </td>
                       </tr>
                     )
@@ -211,14 +230,14 @@ export default function DiningPhilosophers() {
           {step && (
             <motion.div key={currentStep} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="bg-os-surface border border-os-border rounded-xl p-4">
-              <p className="text-sm text-gray-300">{step.explanation}</p>
+              <p className={`text-sm ${step.deadlock ? 'text-rose-300 font-medium' : 'text-gray-300'}`}>{step.explanation}</p>
               <AIExplainer algorithm="Dining Philosophers Problem" step={step} stepIndex={currentStep} totalSteps={steps.length} />
             </motion.div>
           )}
         </div>
 
         <div>
-          <CodePanel code={DINING_CODE} highlightLine={step?.highlightLine ?? -1} annotations={DINING_ANNOTATIONS} />
+          <CodePanel code={getDiningCode(strategy)} highlightLine={step?.highlightLine ?? -1} annotations={DINING_ANNOTATIONS} />
         </div>
       </div>
     </div>

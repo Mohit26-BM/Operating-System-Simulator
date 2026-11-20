@@ -1,6 +1,7 @@
 import { fifo, FIFO_CODE, FIFO_ANNOTATIONS } from './fifo'
 import { lru, LRU_CODE, LRU_ANNOTATIONS } from './lru'
 import { optimal, OPTIMAL_CODE, OPTIMAL_ANNOTATIONS } from './optimal'
+export { validatePagingInput, parseReferenceString } from './common'
 
 export function simulatePaging({ frames, referenceString, algorithm }) {
   switch (algorithm) {

@@ -1,49 +1,43 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
+// Playback state for a list of precomputed simulation steps.
+// The timer lives in one effect that is cleaned up whenever playback stops, the speed changes or
+// the page is left, so timers can never pile up or keep running after navigation.
 export function usePlayer() {
   const [steps, setSteps] = useState([])
   const [currentStep, setCurrentStep] = useState(0)
-  const [playing, setPlaying] = useState(false)
+  const [wantsPlay, setWantsPlay] = useState(false)
   const [speed, setSpeed] = useState(1)
-  const intervalRef = useRef(null)
 
-  const stop = useCallback(() => {
-    clearInterval(intervalRef.current)
-    setPlaying(false)
-  }, [])
+  const lastIndex = steps.length - 1
+  // Playback ends by itself on the last step
+  const playing = wantsPlay && currentStep < lastIndex
+
+  useEffect(() => {
+    if (!playing) return undefined
+    const id = setInterval(() => setCurrentStep((prev) => Math.min(prev + 1, lastIndex)), 1000 / speed)
+    return () => clearInterval(id)
+  }, [playing, speed, lastIndex])
 
   const play = useCallback(() => {
-    if (currentStep >= steps.length - 1) setCurrentStep(0)
-    setPlaying(true)
-    intervalRef.current = setInterval(() => {
-      setCurrentStep(prev => {
-        if (prev >= steps.length - 1) { stop(); return prev }
-        return prev + 1
-      })
-    }, 1000 / speed)
-  }, [steps.length, speed, stop, currentStep])
+    if (steps.length === 0) return
+    setCurrentStep((prev) => (prev >= steps.length - 1 ? 0 : prev))
+    setWantsPlay(true)
+  }, [steps.length])
 
-  const pause = useCallback(() => stop(), [stop])
+  const pause = useCallback(() => setWantsPlay(false), [])
 
-  const stepForward = useCallback(() =>
-    setCurrentStep(prev => Math.min(prev + 1, steps.length - 1)), [steps.length])
+  const stepForward = useCallback(() => setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1)), [steps.length])
 
-  const stepBack = useCallback(() =>
-    setCurrentStep(prev => Math.max(prev - 1, 0)), [])
+  const stepBack = useCallback(() => setCurrentStep((prev) => Math.max(prev - 1, 0)), [])
 
   const reset = useCallback((newSteps = []) => {
-    stop()
+    setWantsPlay(false)
     setSteps(newSteps)
     setCurrentStep(0)
-  }, [stop])
+  }, [])
 
-  const changeSpeed = useCallback((s) => {
-    setSpeed(s)
-    if (playing) { stop(); }
-  }, [playing, stop])
+  const changeSpeed = useCallback((s) => setSpeed(s), [])
 
-  return {
-    steps, currentStep, playing, speed,
-    play, pause, stepForward, stepBack, reset, changeSpeed,
-  }
+  return { steps, currentStep, playing, speed, play, pause, stepForward, stepBack, reset, changeSpeed }
 }

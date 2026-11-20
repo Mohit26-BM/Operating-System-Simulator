@@ -46,14 +46,28 @@ export const DEFAULT_BLOCKS = [
 
 export const DEFAULT_REQUESTS = [212, 417, 112, 426]
 
-function applyAllocation(blocks, reqSize, strategy) {
-  const free = blocks.map((b, i) => ({ ...b, idx: i })).filter(b => b.free && b.size >= reqSize)
-  if (free.length === 0) return null
+export const MAX_ALLOCATION_ITEMS = 20
+export const MAX_SIZE_KB = 100000
 
-  if (strategy === 'firstFit') return free[0].idx
-  if (strategy === 'bestFit')  return free.reduce((best, b) => b.size < free[best === null ? 0 : best].size ? b.idx : (best ?? b.idx), null)
-  if (strategy === 'worstFit') return free.reduce((worst, b) => b.size > free[worst === null ? 0 : worst].size ? b.idx : (worst ?? b.idx), null)
-  return null
+export function validateAllocationInput(blocks, requests) {
+  if (!Array.isArray(blocks) || blocks.length === 0) throw new Error('Enter at least one memory block')
+  if (!Array.isArray(requests) || requests.length === 0) throw new Error('Enter at least one request')
+  if (blocks.length > MAX_ALLOCATION_ITEMS || requests.length > MAX_ALLOCATION_ITEMS) throw new Error(`At most ${MAX_ALLOCATION_ITEMS} blocks and ${MAX_ALLOCATION_ITEMS} requests are supported`)
+  const okSize = (n) => Number.isInteger(n) && n >= 1 && n <= MAX_SIZE_KB
+  if (!blocks.every((b) => okSize(b?.size))) throw new Error(`Block sizes must be whole numbers from 1 to ${MAX_SIZE_KB} KB`)
+  if (!requests.every(okSize)) throw new Error(`Request sizes must be whole numbers from 1 to ${MAX_SIZE_KB} KB`)
+}
+
+// Why a request could not be placed, in terms of what is actually free right now.
+function failureReason(blocks, reqSize) {
+  const free = blocks.filter((b) => b.free)
+  const totalFree = free.reduce((a, b) => a + b.size, 0)
+  const largestFree = free.reduce((a, b) => Math.max(a, b.size), 0)
+  const largestBlock = blocks.reduce((a, b) => Math.max(a, b.size), 0)
+  if (reqSize > largestBlock) return `${reqSize} KB is larger than the biggest block (${largestBlock} KB), so it can never fit.`
+  if (totalFree === 0) return 'Every block is already allocated, so no memory is left.'
+  if (totalFree >= reqSize) return `External fragmentation: ${totalFree} KB is free in total, but the largest free block is only ${largestFree} KB, and a request needs one contiguous block.`
+  return `Not enough free memory: ${totalFree} KB is free but ${reqSize} KB is needed.`
 }
 
 function runStrategy(initialBlocks, requests, strategy) {
@@ -62,7 +76,6 @@ function runStrategy(initialBlocks, requests, strategy) {
 
   for (let r = 0; r < requests.length; r++) {
     const reqSize = requests[r]
-    const highlight = []
 
     // Scan phase — mark each candidate
     const candidates = blocks
@@ -77,7 +90,7 @@ function runStrategy(initialBlocks, requests, strategy) {
         highlight: [],
         result: 'fail',
         explanation: `Request ${reqSize} KB failed — no free block large enough.`,
-        why: 'External fragmentation: free memory exists but not in a single contiguous block large enough.',
+        why: failureReason(blocks, reqSize),
         highlightLine: 6,
       })
       continue
@@ -131,6 +144,7 @@ function runStrategy(initialBlocks, requests, strategy) {
 }
 
 export function runMemoryAllocation(blocks, requests) {
+  validateAllocationInput(blocks, requests)
   return {
     firstFit:  runStrategy(blocks, requests, 'firstFit'),
     bestFit:   runStrategy(blocks, requests, 'bestFit'),

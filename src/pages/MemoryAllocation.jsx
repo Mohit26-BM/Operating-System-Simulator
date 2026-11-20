@@ -1,9 +1,10 @@
+import { parseIntegerList } from '../simulation/parse'
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FIRST_FIT_CODE, BEST_FIT_CODE, WORST_FIT_CODE,
   ANNOTATIONS, DEFAULT_BLOCKS, DEFAULT_REQUESTS,
-  runMemoryAllocation,
+  runMemoryAllocation, MAX_ALLOCATION_ITEMS, MAX_SIZE_KB,
 } from '../simulation/memoryAllocation'
 import CodePanel from '../components/shared/CodePanel'
 import Controls from '../components/shared/Controls'
@@ -49,7 +50,6 @@ const STRATEGY_META = {
   worstFit: { label: 'Worst Fit',  color: '#f43f5e', border: 'border-red-500/40',    bg: 'bg-red-500/8',     text: 'text-red-400',    code: WORST_FIT_CODE },
 }
 
-const TOTAL_MEMORY = 1700  // sum of DEFAULT_BLOCKS
 
 function MemoryBar({ blocks, step, meta }) {
   const renderBlocks = step ? step.blocks : blocks.map(b => ({ ...b, free: true, allocatedTo: null }))
@@ -119,7 +119,7 @@ function MemoryBar({ blocks, step, meta }) {
   )
 }
 
-function StrategyPanel({ strategyKey, steps, currentStep }) {
+function StrategyPanel({ strategyKey, steps, currentStep, blocks }) {
   const meta = STRATEGY_META[strategyKey]
   const step = steps[currentStep] ?? null
   const faults = steps.slice(0, currentStep + 1).filter(s => s.result === 'fail').length
@@ -136,7 +136,7 @@ function StrategyPanel({ strategyKey, steps, currentStep }) {
       </div>
 
       <MemoryBar
-        blocks={DEFAULT_BLOCKS}
+        blocks={blocks}
         step={step}
         meta={meta}
       />
@@ -172,13 +172,28 @@ export default function MemoryAllocation() {
   const [strategy, setStrategy] = useState('firstFit')
   const { steps, currentStep, playing, speed, play, pause, stepForward, stepBack, reset, changeSpeed } = usePlayer()
 
+  const [blocksInput, setBlocksInput] = useState(DEFAULT_BLOCKS.map(b => b.size).join(' '))
+  const [requestsInput, setRequestsInput] = useState(DEFAULT_REQUESTS.join(' '))
+
+  // Blocks and requests are re-read from the two text fields on every edit; bad input shows a message instead of crashing.
+  const parsed = useMemo(() => {
+    const b = parseIntegerList(blocksInput, { min: 1, max: MAX_SIZE_KB, maxCount: MAX_ALLOCATION_ITEMS, label: 'Blocks' })
+    if (!b.ok) return { ok: false, error: b.error }
+    const r = parseIntegerList(requestsInput, { min: 1, max: MAX_SIZE_KB, maxCount: MAX_ALLOCATION_ITEMS, label: 'Requests' })
+    if (!r.ok) return { ok: false, error: r.error }
+    return { ok: true, blocks: b.values.map((size, id) => ({ id, size })), requests: r.values }
+  }, [blocksInput, requestsInput])
+
   const allResults = useMemo(
-    () => runMemoryAllocation(DEFAULT_BLOCKS, DEFAULT_REQUESTS),
-    []
+    () => (parsed.ok ? runMemoryAllocation(parsed.blocks, parsed.requests) : { firstFit: [], bestFit: [], worstFit: [] }),
+    [parsed]
   )
+  const blocks = parsed.ok ? parsed.blocks : []
+  const requests = parsed.ok ? parsed.requests : []
+  const totalMemory = blocks.reduce((a, b) => a + b.size, 0)
 
   function handleRun() {
-    reset(allResults[strategy])
+    if (parsed.ok) reset(allResults[strategy])
   }
 
   function switchStrategy(s) {
@@ -221,11 +236,26 @@ export default function MemoryAllocation() {
           </button>
         ))}
         <button
-          onClick={handleRun}
-          className="ml-auto px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors"
+          onClick={handleRun} disabled={!parsed.ok}
+          className="ml-auto disabled:opacity-40 px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors"
         >
           Run Simulation
         </button>
+      </div>
+
+      {/* Editable setup */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-gray-500">Block sizes in KB, space separated (fixed partitions, at most {MAX_ALLOCATION_ITEMS})</span>
+          <input value={blocksInput} onChange={e => { setBlocksInput(e.target.value); reset([]) }} aria-invalid={!parsed.ok}
+            className="w-full bg-os-bg border border-os-border rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:outline-none focus:border-cyan-500" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-gray-500">Request sizes in KB, in arrival order</span>
+          <input value={requestsInput} onChange={e => { setRequestsInput(e.target.value); reset([]) }} aria-invalid={!parsed.ok}
+            className="w-full bg-os-bg border border-os-border rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:outline-none focus:border-cyan-500" />
+        </label>
+        {!parsed.ok && <p role="alert" className="sm:col-span-2 text-[11px] text-red-400">{parsed.error}</p>}
       </div>
 
       {/* Setup info */}
@@ -233,18 +263,18 @@ export default function MemoryAllocation() {
         <div className="bg-os-surface border border-os-border rounded-xl p-4 space-y-2">
           <div className="text-xs font-mono text-gray-600 uppercase tracking-widest">Memory Blocks</div>
           <div className="flex flex-wrap gap-2">
-            {DEFAULT_BLOCKS.map((b, i) => (
+            {blocks.map((b, i) => (
               <div key={i} className="text-xs font-mono px-2 py-1 rounded bg-os-bg border border-os-border text-gray-400">
                 Block {i}: <span className="text-white">{b.size} KB</span>
               </div>
             ))}
           </div>
-          <div className="text-xs text-gray-600">Total: {TOTAL_MEMORY} KB</div>
+          <div className="text-xs text-gray-600">Total: {totalMemory} KB</div>
         </div>
         <div className="bg-os-surface border border-os-border rounded-xl p-4 space-y-2">
           <div className="text-xs font-mono text-gray-600 uppercase tracking-widest">Requests</div>
           <div className="flex flex-wrap gap-2">
-            {DEFAULT_REQUESTS.map((r, i) => (
+            {requests.map((r, i) => (
               <div key={i} className="text-xs font-mono px-2 py-1 rounded bg-os-bg border border-os-border text-gray-400">
                 P{i + 1}: <span className="text-white">{r} KB</span>
               </div>
@@ -264,6 +294,7 @@ export default function MemoryAllocation() {
                 <StrategyPanel
                   strategyKey={key}
                   steps={allResults[key]}
+                  blocks={blocks}
                   currentStep={steps.length > 0 && key === strategy ? currentStep : -1}
                 />
               </div>

@@ -159,7 +159,7 @@ function MultiProcessDiagram() {
   return (
     <div className="bg-os-bg border border-os-border rounded-2xl p-6 space-y-3">
       <div className="text-xs font-mono text-gray-600 uppercase tracking-widest mb-2">Multiple Processes</div>
-      {['Process A (PID 100)', 'Process B (PID 101)', 'Process C (PID 102)'].map((name, i) => (
+      {['Process A (PID 100)', 'Process B (PID 101)', 'Process C (PID 102)'].map((name) => (
         <div key={name} className="border border-os-border rounded-xl p-3 space-y-2">
           <div className="text-xs font-mono text-cyan-400">{name}</div>
           <div className="grid grid-cols-3 gap-1">

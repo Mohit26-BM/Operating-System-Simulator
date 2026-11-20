@@ -6,9 +6,11 @@ import Controls from '../components/shared/Controls'
 import AIExplainer from '../components/shared/AIExplainer'
 import SimHelp from '../components/shared/SimHelp'
 import { usePlayer } from '../hooks/usePlayer'
-import { runDisk, getDiskCode, getDiskAnnotations } from '../simulation/disk'
+import { runDisk, getDiskCode, getDiskAnnotations, DISK_ALGORITHMS } from '../simulation/disk'
+import { parseInteger, parseIntegerList } from '../simulation/parse'
 
-const ALGORITHMS = ['FCFS', 'SSTF', 'SCAN', 'C-SCAN']
+const ALGORITHMS = DISK_ALGORITHMS
+const SWEEPING = ['SCAN', 'C-SCAN', 'LOOK', 'C-LOOK']
 const DEFAULT_REQUESTS = '98 183 37 122 14 124 65 67'
 const MAX_CYLINDER = 199
 
@@ -40,8 +42,10 @@ const HELP = {
       items: [
         { icon: '→', label: 'FCFS',   text: 'First-come first-served. Simple but causes lots of zig-zag movement.' },
         { icon: '◎', label: 'SSTF',   text: 'Shortest Seek Time First. Fast average but can starve far requests.' },
-        { icon: '⇕', label: 'SCAN',   text: 'Elevator: sweeps to one end then reverses.' },
-        { icon: '⇒', label: 'C-SCAN', text: 'Circular SCAN: sweeps one way, jumps back to start. Uniform wait time.' },
+        { icon: '⇕', label: 'SCAN',   text: 'Elevator: always runs to the disk edge, then reverses.' },
+        { icon: '⇒', label: 'C-SCAN', text: 'Circular SCAN: runs to the edge, jumps back to the start and sweeps the same way again. Uniform wait time.' },
+        { icon: '↕', label: 'LOOK',   text: 'Like SCAN, but turns around at the last request instead of the edge. Less head movement.' },
+        { icon: '↻', label: 'C-LOOK', text: 'Like C-SCAN, but jumps straight to the lowest waiting request. The jump is counted in the total.' },
       ],
     },
   ],
@@ -51,6 +55,7 @@ export default function DiskScheduling() {
   const [algorithm, setAlgorithm] = useState('FCFS')
   const [headInput, setHeadInput] = useState('53')
   const [requestsInput, setRequestsInput] = useState(DEFAULT_REQUESTS)
+  const [direction, setDirection] = useState('up')
   const [errors, setErrors] = useState({})
   const { steps, currentStep, playing, speed, play, pause, stepForward, stepBack, reset, changeSpeed } = usePlayer()
 
@@ -58,24 +63,22 @@ export default function DiskScheduling() {
 
   function validate() {
     const e = {}
-    const head = parseInt(headInput)
-    if (isNaN(head) || head < 0 || head > MAX_CYLINDER)
-      e.head = `Must be 0–${MAX_CYLINDER}`
-    const reqs = requestsInput.trim().split(/\s+/).map(Number)
-    if (reqs.length < 1 || reqs.some(isNaN))
-      e.requests = 'Enter space-separated numbers'
-    else if (reqs.some(r => r < 0 || r > MAX_CYLINDER))
-      e.requests = `All values must be 0–${MAX_CYLINDER}`
-    return e
+    const head = parseInteger(headInput, { min: 0, max: MAX_CYLINDER, label: 'Head position' })
+    if (!head.ok) e.head = head.error
+    const reqs = parseIntegerList(requestsInput, { min: 0, max: MAX_CYLINDER, maxCount: 100, label: 'Requests' })
+    if (!reqs.ok) e.requests = reqs.error
+    return { e, head: head.value, requests: reqs.values }
   }
 
   function handleRun() {
-    const e = validate()
+    const { e, head, requests } = validate()
     setErrors(e)
     if (Object.keys(e).length > 0) return
-    const head = parseInt(headInput)
-    const requests = requestsInput.trim().split(/\s+/).map(Number)
-    reset(runDisk({ head, requests, algorithm, maxCylinder: MAX_CYLINDER }))
+    try {
+      reset(runDisk({ head, requests, algorithm, maxCylinder: MAX_CYLINDER, direction }))
+    } catch (err) {
+      setErrors({ requests: err.message })
+    }
   }
 
   return (
@@ -129,6 +132,19 @@ export default function DiskScheduling() {
           />
           {errors.requests && <span className="text-[10px] text-red-400">{errors.requests}</span>}
         </label>
+        {SWEEPING.includes(algorithm) && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-gray-500">First direction</span>
+            <div className="flex gap-1">
+              {[['up', 'Up (to 199)'], ['down', 'Down (to 0)']].map(([v, label]) => (
+                <button key={v} type="button" onClick={() => { setDirection(v); reset([]) }} aria-pressed={direction === v}
+                  className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${direction === v ? 'bg-rose-600/20 border-rose-500/50 text-rose-200' : 'border-os-border text-gray-400 hover:text-white'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="pt-5">
           <button
             onClick={handleRun}

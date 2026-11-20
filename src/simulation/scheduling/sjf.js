@@ -1,3 +1,5 @@
+import { pickNext, readyList } from './common'
+
 export const SJF_CODE = [
   'sort processes by arrival time',
   'while unfinished processes exist:',
@@ -19,34 +21,33 @@ export const SJF_ANNOTATIONS = {
 }
 
 export function sjf(processes) {
-  const remaining = processes.map(p => ({ ...p }))
   const steps = []
-  let time = 0
   const done = new Set()
+  let time = 0
 
   while (done.size < processes.length) {
-    const available = remaining.filter(p => !done.has(p.id) && p.arrival <= time)
+    const next = pickNext(processes, done, time, (p) => p.burst)
 
-    if (!available.length) {
-      steps.push({ time, running: null, queue: [], highlightLine: 3, explanation: `No process has arrived yet at t=${time}. Advancing time.` })
+    if (!next) {
+      steps.push({ time, running: null, queue: [], idle: true, duration: 1, highlightLine: 3, explanation: `No process has arrived yet at t=${time}. Advancing time.` })
       time++
       continue
     }
 
-    const next = available.reduce((a, b) => a.burst < b.burst ? a : b)
     const start = time
+    const waitingNow = readyList(processes, done, time, next.id)
 
     steps.push({
       time, running: next.id,
-      queue: available.filter(p => p.id !== next.id).map(p => p.id),
+      queue: waitingNow,
       highlightLine: 4,
-      explanation: `Selected ${next.id} (burst=${next.burst}) — shortest among ${available.length} available process(es).`,
+      explanation: `Selected ${next.id} (burst=${next.burst}) — shortest among ${waitingNow.length + 1} available process(es).`,
     })
 
     for (let t = 1; t < next.burst; t++) {
-      const queue = remaining.filter(p => !done.has(p.id) && p.arrival <= time + t && p.id !== next.id).map(p => p.id)
       steps.push({
-        time: time + t, running: next.id, queue,
+        time: time + t, running: next.id,
+        queue: readyList(processes, done, time + t, next.id),
         highlightLine: 6,
         explanation: `Running ${next.id} — ${next.burst - t} burst unit(s) left. SJF won't preempt even if a shorter job arrives now.`,
       })
@@ -55,7 +56,7 @@ export function sjf(processes) {
     time += next.burst
     done.add(next.id)
     steps.push({
-      time, running: null, queue: [],
+      time, running: null, queue: readyList(processes, done, time),
       completed: next.id,
       turnaround: time - next.arrival,
       waiting: start - next.arrival,
