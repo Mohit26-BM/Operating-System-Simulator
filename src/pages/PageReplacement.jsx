@@ -46,9 +46,9 @@ const PRESETS = [
 ]
 
 const ALGO_COLORS = {
-  FIFO:    { accent: '#06b6d4', bg: 'bg-cyan-500/10',   border: 'border-cyan-500/40',   text: 'text-cyan-400'   },
-  LRU:     { accent: '#22c55e', bg: 'bg-green-500/10',  border: 'border-green-500/40',  text: 'text-green-400'  },
-  Optimal: { accent: '#a78bfa', bg: 'bg-violet-500/10', border: 'border-violet-500/40', text: 'text-violet-400' },
+  FIFO:    { accent: '#6dffb0', bg: 'bg-cyan-500/10',   border: 'border-cyan-500/40',   text: 'text-cyan-400'   },
+  LRU:     { accent: '#9ae870', bg: 'bg-green-500/10',  border: 'border-green-500/40',  text: 'text-green-400'  },
+  Optimal: { accent: '#b4a7ff', bg: 'bg-violet-500/10', border: 'border-violet-500/40', text: 'text-violet-400' },
 }
 
 function FrameGrid({ frames, frameCount, stepEvent, incoming }) {

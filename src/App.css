@@ -1,4 +1,2 @@
-/* Tailwind handles all styling — only global overrides here */
+/* Styling lives in Tailwind and index.css (Terminal theme). Global overrides only. */
 * { box-sizing: border-box; }
-body { background: #0f0e17; color: #f3f4f6; }
-input[type="number"]::-webkit-inner-spin-button { opacity: 1; }

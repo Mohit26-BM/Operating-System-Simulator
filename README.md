@@ -218,23 +218,35 @@ The `<Navbar>` groups all 12 routes into three dropdown menus — **CPU & Proces
 
 ---
 
-## Theme
+## Theme: Terminal
 
-Defined in `src/index.css` via Tailwind v4 `@theme` (CSS custom properties):
+The look is a console: phosphor green on a green-black screen, JetBrains Mono for headings and numbers, Inter for body text, and a faint grid behind everything. The colours follow the states an operating system has, and they mean the same thing on every page:
 
-```css
---color-os-bg:      #030712   /* page background  */
---color-os-surface: #0f1117   /* card backgrounds */
---color-os-border:  #1a2433   /* borders          */
---color-os-purple:  #06b6d4   /* accent cyan      */
---color-os-blue:    #06b6d4   /* accent cyan      */
---color-os-green:   #22c55e
---color-os-amber:   #eab308
---color-os-red:     #f43f5e
---color-os-muted:   #64748b
-```
+| Colour | Meaning |
+|---|---|
+| Phosphor green `#6dffb0` | running, active, the thing to watch (the brand colour) |
+| Amber `#ffb454` | ready (waiting for its turn), warnings |
+| Coral `#ff6b6b` | blocked, fault, deadlock, error |
+| Steel blue `#7cc4ff` | I/O and secondary series |
+| Lavender `#b4a7ff` | a further series |
 
-Components use `bg-os-surface`, `border-os-border`, `text-os-muted`, etc. as utility classes.
+Everything is defined in `src/index.css` with Tailwind v4 `@theme`. Besides the named tokens (`os-bg`, `os-surface`, `os-border`, `os-muted`), Tailwind's own colour scales (cyan, emerald, green, amber, red, rose, blue, purple, gray and so on) are re-pointed to this palette, so a class such as `text-cyan-400` or `bg-gray-700` anywhere in the app already uses the Terminal colours. The Gantt chart uses eight clearly different hues with dark text on them.
+
+### Home page hero
+
+A banner of five photographs (a code screen, a chip, a server rack, circuit traces and a server corridor) that cross-fade slowly behind the headline. The photos are converted to a green duotone so they match the palette whatever their original colours. Below the headline a strip plays the real Round Robin scheduler from the simulator (the same engine as the CPU Scheduling page) one time unit at a time. With reduced motion switched on, the hero shows one still photo and the strip stays on its finished state. The photos live in `public/images`, so the site never calls Pexels when it runs.
+
+### Motion
+
+Buttons, links and cards ease between states, pressed buttons dip slightly, sliders grow under the pointer, pages fade in with their blocks rising one after another, and cards on the Home page reveal as they scroll into view. Everything respects the operating-system "reduce motion" setting.
+
+### Navigation and footer
+
+The navigation groups and the footer both read one list, `src/navigation.js`. To add a simulator, add it there, in `App.jsx` and in the Home `SECTIONS`.
+
+## Image credits
+
+The Home page banner uses photographs from [Pexels](https://www.pexels.com) (free licence): Nemuel Sereti, Jakub Pabis, panumas nikhomkhai, Tima Miroshnichenko and Brett Sayles. Each photo is credited on the page. They are stored as WebP files in `public/images`, and no Pexels key is needed to run or deploy the site.
 
 ---
 

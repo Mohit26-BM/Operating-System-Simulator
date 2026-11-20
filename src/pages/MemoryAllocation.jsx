@@ -45,9 +45,9 @@ const HELP = {
 }
 
 const STRATEGY_META = {
-  firstFit: { label: 'First Fit',  color: '#06b6d4', border: 'border-cyan-500/40',   bg: 'bg-cyan-500/8',    text: 'text-cyan-400',   code: FIRST_FIT_CODE },
-  bestFit:  { label: 'Best Fit',   color: '#22c55e', border: 'border-green-500/40',  bg: 'bg-green-500/8',   text: 'text-green-400',  code: BEST_FIT_CODE  },
-  worstFit: { label: 'Worst Fit',  color: '#f43f5e', border: 'border-red-500/40',    bg: 'bg-red-500/8',     text: 'text-red-400',    code: WORST_FIT_CODE },
+  firstFit: { label: 'First Fit',  color: '#6dffb0', border: 'border-cyan-500/40',   bg: 'bg-cyan-500/8',    text: 'text-cyan-400',   code: FIRST_FIT_CODE },
+  bestFit:  { label: 'Best Fit',   color: '#9ae870', border: 'border-green-500/40',  bg: 'bg-green-500/8',   text: 'text-green-400',  code: BEST_FIT_CODE  },
+  worstFit: { label: 'Worst Fit',  color: '#ff6b6b', border: 'border-red-500/40',    bg: 'bg-red-500/8',     text: 'text-red-400',    code: WORST_FIT_CODE },
 }
 
 
@@ -74,7 +74,7 @@ function MemoryBar({ blocks, step, meta }) {
                 background: block.free
                   ? isHighlighted
                     ? (isChosen ? meta.color + '40' : meta.color + '18')
-                    : '#0a0f1a'
+                    : '#0a110d'
                   : meta.color + '30',
                 borderLeft: isChosen ? `2px solid ${meta.color}` : undefined,
               }}

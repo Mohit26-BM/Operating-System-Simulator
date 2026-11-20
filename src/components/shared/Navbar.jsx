@@ -1,35 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-
-const GROUPS = [
-  {
-    label: 'CPU & Process',
-    items: [
-      { label: 'CPU Scheduling',       path: '/scheduling'           },
-      { label: 'Process States',       path: '/process-state'        },
-      { label: 'Threads vs Processes', path: '/threads-vs-processes' },
-    ],
-  },
-  {
-    label: 'Concurrency',
-    items: [
-      { label: 'Synchronization',     path: '/synchronization'      },
-      { label: 'Producer-Consumer',   path: '/producer-consumer'    },
-      { label: 'Dining Philosophers', path: '/dining-philosophers'  },
-      { label: 'Deadlock',            path: '/deadlock'             },
-    ],
-  },
-  {
-    label: 'Memory',
-    items: [
-      { label: 'Memory & Paging',    path: '/paging'            },
-      { label: 'Page Replacement',   path: '/page-replacement'  },
-      { label: 'Memory Allocation',  path: '/memory-allocation' },
-      { label: 'Dynamic Allocation', path: '/dynamic-memory'    },
-      { label: 'Disk Scheduling',    path: '/disk'              },
-    ],
-  },
-]
+import { GROUPS, ALL_ITEMS } from '../../navigation'
 
 function DropdownGroup({ group }) {
   const [open, setOpen] = useState(false)
@@ -87,13 +58,23 @@ function DropdownGroup({ group }) {
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { pathname } = useLocation()
+  const current = ALL_ITEMS.find((i) => i.path === pathname)
 
   return (
-    <nav className="bg-os-bg border-b border-os-border">
+    <nav className="bg-os-bg/90 backdrop-blur border-b border-os-border sticky top-0 z-50">
       <div className="flex items-center justify-between px-6 py-3">
-        <NavLink to="/" className="text-white font-bold text-lg tracking-tight shrink-0">
-          OS<span className="text-cyan-400">Sim</span>
-        </NavLink>
+        <div className="flex items-center gap-3 min-w-0">
+          <NavLink to="/" className="font-mono text-white font-bold text-lg tracking-tight shrink-0">
+            OS<span className="text-cyan-400">Sim</span>
+          </NavLink>
+          {current && (
+            <span className="hidden lg:flex items-center gap-3 min-w-0 text-sm font-mono">
+              <span className="text-os-border">/</span>
+              <span className="text-gray-300 truncate">{current.label}</span>
+            </span>
+          )}
+        </div>
 
         {/* Desktop grouped nav */}
         <div className="hidden md:flex items-center gap-6">
@@ -105,6 +86,8 @@ export default function Navbar() {
         {/* Mobile hamburger */}
         <button
           onClick={() => setMobileOpen(o => !o)}
+          aria-label="Menu"
+          aria-expanded={mobileOpen}
           className="md:hidden text-gray-400 hover:text-white p-1"
         >
           {mobileOpen ? '✕' : '☰'}

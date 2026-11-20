@@ -34,12 +34,12 @@ const HELP = {
 }
 
 const MEMORY_REGIONS = [
-  { label: 'Code Segment',  desc: 'Executable instructions',     sharedByThreads: true,  color: '#06b6d4', icon: '{}' },
-  { label: 'Heap',          desc: 'Dynamic allocations (malloc)', sharedByThreads: true,  color: '#22c55e', icon: '⬡' },
-  { label: 'Global Data',   desc: 'Global & static variables',    sharedByThreads: true,  color: '#a78bfa', icon: '⊞' },
-  { label: 'Stack T1',      desc: 'Thread 1 local variables',     sharedByThreads: false, color: '#f59e0b', icon: '▤' },
-  { label: 'Stack T2',      desc: 'Thread 2 local variables',     sharedByThreads: false, color: '#f43f5e', icon: '▤' },
-  { label: 'Stack T3',      desc: 'Thread 3 local variables',     sharedByThreads: false, color: '#ec4899', icon: '▤' },
+  { label: 'Code Segment',  desc: 'Executable instructions',     sharedByThreads: true,  color: '#6dffb0', icon: '{}' },
+  { label: 'Heap',          desc: 'Dynamic allocations (malloc)', sharedByThreads: true,  color: '#9ae870', icon: '⬡' },
+  { label: 'Global Data',   desc: 'Global & static variables',    sharedByThreads: true,  color: '#b4a7ff', icon: '⊞' },
+  { label: 'Stack T1',      desc: 'Thread 1 local variables',     sharedByThreads: false, color: '#ffb454', icon: '▤' },
+  { label: 'Stack T2',      desc: 'Thread 2 local variables',     sharedByThreads: false, color: '#ff6b6b', icon: '▤' },
+  { label: 'Stack T3',      desc: 'Thread 3 local variables',     sharedByThreads: false, color: '#ff8fb8', icon: '▤' },
 ]
 
 const DIFFERENCES = [
@@ -52,9 +52,9 @@ const DIFFERENCES = [
 ]
 
 const THREADS = [
-  { id: 'T1', color: '#f59e0b', label: 'Thread 1', state: 'Running' },
-  { id: 'T2', color: '#f43f5e', label: 'Thread 2', state: 'Ready'   },
-  { id: 'T3', color: '#ec4899', label: 'Thread 3', state: 'Waiting' },
+  { id: 'T1', color: '#ffb454', label: 'Thread 1', state: 'Running' },
+  { id: 'T2', color: '#ff6b6b', label: 'Thread 2', state: 'Ready'   },
+  { id: 'T3', color: '#ff8fb8', label: 'Thread 3', state: 'Waiting' },
 ]
 
 function ProcessDiagram({ activeThread, setActiveThread }) {

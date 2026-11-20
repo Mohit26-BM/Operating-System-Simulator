@@ -1,6 +1,8 @@
 import { Component, Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { MotionConfig, motion } from 'framer-motion'
 import Navbar from './components/shared/Navbar'
+import Footer from './components/shared/Footer'
 import './App.css'
 
 const Home = lazy(() => import('./pages/Home'))
@@ -54,14 +56,32 @@ class ErrorBoundary extends Component {
   }
 }
 
+function PageSkeleton() {
+  return (
+    <div role="status" aria-label="Loading" className="max-w-7xl mx-auto px-6 py-10 space-y-5">
+      <div className="skeleton h-9 w-64" />
+      <div className="skeleton h-4 w-2/3" />
+      <div className="skeleton h-64" />
+    </div>
+  )
+}
+
 function AppLayout() {
   const { pathname } = useLocation()
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       {pathname !== '/' && <Navbar />}
       {/* keyed by route so an error on one page does not stick when you navigate away */}
       <ErrorBoundary key={pathname}>
-        <Suspense fallback={<div className="max-w-xl mx-auto px-6 py-24 text-center text-sm text-gray-500" role="status">Loading…</div>}>
+        <Suspense fallback={<PageSkeleton />}>
+        {/* each page eases in, and its blocks rise one after another (see .page-enter in index.css) */}
+        <motion.div
+          key={pathname}
+          className="page-enter flex-1"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.2, 0.7, 0.2, 1] }}
+        >
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/scheduling" element={<Scheduling />} />
@@ -78,18 +98,23 @@ function AppLayout() {
           <Route path="/dynamic-memory" element={<DynamicMemory />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </motion.div>
         </Suspense>
       </ErrorBoundary>
-    </>
+      <Footer />
+    </div>
   )
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-os-bg text-white">
-        <AppLayout />
-      </div>
+      {/* "user" respects the operating-system setting for reduced motion everywhere */}
+      <MotionConfig reducedMotion="user">
+        <div className="min-h-screen text-white">
+          <AppLayout />
+        </div>
+      </MotionConfig>
     </BrowserRouter>
   )
 }

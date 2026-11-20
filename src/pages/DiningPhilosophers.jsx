@@ -115,8 +115,8 @@ export default function DiningPhilosophers() {
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4 self-start">Table View</h3>
             <svg width={CENTER * 2} height={CENTER * 2} className="overflow-visible">
               {/* Table */}
-              <circle cx={CENTER} cy={CENTER} r={70} fill="#1a1825" stroke="#2d2b3d" strokeWidth={2} />
-              <text x={CENTER} y={CENTER + 5} textAnchor="middle" fill="#4b5563" fontSize={11}>TABLE</text>
+              <circle cx={CENTER} cy={CENTER} r={70} fill="#0f1c15" stroke="#1c3226" strokeWidth={2} />
+              <text x={CENTER} y={CENTER + 5} textAnchor="middle" fill="#52695b" fontSize={11}>TABLE</text>
 
               {/* Forks */}
               {Array.from({ length: N }, (_, i) => {
@@ -126,13 +126,13 @@ export default function DiningPhilosophers() {
                   <g key={`fork-${i}`}>
                     <motion.circle
                       cx={pos.x} cy={pos.y} r={10}
-                      fill={held ? '#6366f1' : '#1a1825'}
-                      stroke={held ? '#818cf8' : '#3d3b4d'}
+                      fill={held ? '#8fa0ff' : '#0f1c15'}
+                      stroke={held ? '#aab4ff' : '#24402f'}
                       strokeWidth={2}
-                      animate={{ fill: held ? '#6366f1' : '#1a1825' }}
+                      animate={{ fill: held ? '#8fa0ff' : '#0f1c15' }}
                       transition={{ duration: 0.2 }}
                     />
-                    <text x={pos.x} y={pos.y + 4} textAnchor="middle" fill="#9ca3af" fontSize={9}>F{i}</text>
+                    <text x={pos.x} y={pos.y + 4} textAnchor="middle" fill="#8fab9b" fontSize={9}>F{i}</text>
                   </g>
                 )
               })}
@@ -142,7 +142,7 @@ export default function DiningPhilosophers() {
                 const pos = polarToCart(philosopherAngle(i), RADIUS)
                 const state = step?.states?.[i] ?? 'THINKING'
                 const isActor = step?.actor === i
-                const fillColor = state === 'EATING' ? '#10b981' : state === 'HUNGRY' ? '#f59e0b' : '#4b5563'
+                const fillColor = state === 'EATING' ? '#4fe3b8' : state === 'HUNGRY' ? '#ffb454' : '#52695b'
                 const strokeColor = isActor ? '#ffffff' : fillColor
 
                 return (

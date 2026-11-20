@@ -111,7 +111,7 @@ export default function ProcessForm({ onAdd, onClear, processCount = 0 }) {
         </button>
         <button
           onClick={handleClear}
-          className="px-4 py-1.5 bg-os-border hover:bg-[#2a3a4a] text-gray-300 rounded-lg text-sm transition-colors"
+          className="px-4 py-1.5 bg-os-border hover:bg-[#24402f] text-gray-300 rounded-lg text-sm transition-colors"
         >
           Clear
         </button>

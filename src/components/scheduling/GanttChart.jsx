@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion'
 import { buildGantt } from '../../simulation/scheduling/metrics'
 
+// Eight clearly different hues from the Terminal palette (all bright enough for dark text)
 const COLORS = [
-  'bg-indigo-500', 'bg-amber-500', 'bg-emerald-500',
-  'bg-rose-500', 'bg-blue-500', 'bg-purple-500',
+  'bg-cyan-400', 'bg-amber-400', 'bg-rose-400', 'bg-blue-400',
+  'bg-purple-400', 'bg-lime-400', 'bg-orange-400', 'bg-teal-400',
 ]
 
 function colorFor(pid) {
@@ -31,9 +32,9 @@ export default function GanttChart({ steps, currentStep }) {
             animate={{ opacity: 1, scale: c.stepIndex === currentStep ? 1.1 : 1 }}
             transition={{ duration: 0.15 }}
             style={c.span > 1 ? { width: '5.5rem' } : undefined}
-            className={`${c.span > 1 ? '' : 'w-11'} h-11 rounded-lg flex items-center justify-center text-xs font-bold text-white
+            className={`${c.span > 1 ? '' : 'w-11'} h-11 rounded-lg flex items-center justify-center text-xs font-bold text-os-bg
               ${c.pid ? colorFor(c.pid) : 'bg-gray-700'}
-              ${c.stepIndex === currentStep ? 'ring-2 ring-white ring-offset-1 ring-offset-os-surface' : ''}`}
+              ${c.stepIndex === currentStep ? 'ring-2 ring-white ring-offset-2 ring-offset-os-surface' : ''}`}
             title={c.pid ?? `Idle for ${c.span} unit(s)`}
           >
             {c.pid ?? (c.span > 1 ? `idle ×${c.span}` : '—')}

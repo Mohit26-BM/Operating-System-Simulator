@@ -11,7 +11,7 @@ export default function Controls({
       {/* Progress bar */}
       <div className="w-full h-1.5 bg-os-border rounded-full overflow-hidden">
         <div
-          className="h-full bg-indigo-500 transition-all duration-300"
+          className="h-full bg-cyan-500 transition-all duration-300"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -21,14 +21,14 @@ export default function Controls({
         <div className="flex items-center gap-2">
           <button
             onClick={onReset}
-            className="px-3 py-1.5 text-sm rounded-lg bg-os-border text-gray-300 hover:bg-[#3d3b4d] transition-colors"
+            className="px-3 py-1.5 text-sm rounded-lg bg-os-border text-gray-300 hover:bg-[#24402f] transition-colors"
           >
             Reset
           </button>
           <button
             onClick={onBack}
             disabled={current === 0}
-            className="px-3 py-1.5 text-sm rounded-lg bg-os-border text-gray-300 hover:bg-[#3d3b4d] disabled:opacity-30 transition-colors"
+            className="px-3 py-1.5 text-sm rounded-lg bg-os-border text-gray-300 hover:bg-[#24402f] disabled:opacity-30 transition-colors"
           >
             ← Back
           </button>
@@ -51,7 +51,7 @@ export default function Controls({
           <button
             onClick={onForward}
             disabled={current >= max}
-            className="px-3 py-1.5 text-sm rounded-lg bg-os-border text-gray-300 hover:bg-[#3d3b4d] disabled:opacity-30 transition-colors"
+            className="px-3 py-1.5 text-sm rounded-lg bg-os-border text-gray-300 hover:bg-[#24402f] disabled:opacity-30 transition-colors"
           >
             Next →
           </button>
@@ -70,7 +70,7 @@ export default function Controls({
                 className={`px-2 py-0.5 text-xs rounded ${
                   speed === s
                     ? 'bg-cyan-600 text-white'
-                    : 'bg-os-border text-gray-400 hover:bg-[#3d3b4d]'
+                    : 'bg-os-border text-gray-400 hover:bg-[#24402f]'
                 } transition-colors`}
               >
                 {s}x

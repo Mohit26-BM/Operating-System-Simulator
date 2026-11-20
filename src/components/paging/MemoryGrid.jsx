@@ -13,7 +13,7 @@ export default function MemoryGrid({ step, frameCount }) {
       {frames.map(({ frame, page, isNew }) => (
         <motion.div
           key={frame}
-          animate={isNew ? { backgroundColor: 'rgba(16,185,129,0.15)' } : {}}
+          animate={isNew ? { backgroundColor: 'rgba(79,227,184,0.15)' } : {}}
           transition={{ duration: 0.3 }}
           className={`flex items-center justify-between px-3 py-2 rounded-lg border ${
             page !== null

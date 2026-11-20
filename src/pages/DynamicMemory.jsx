@@ -42,7 +42,7 @@ const HELP = {
 }
 
 // A colour per process name, stable between steps
-const PALETTE = ['#06b6d4', '#f59e0b', '#10b981', '#f43f5e', '#6366f1', '#a78bfa', '#84cc16', '#ec4899', '#14b8a6', '#f97316']
+const PALETTE = ['#6dffb0', '#ffb454', '#4fe3b8', '#ff6b6b', '#8fa0ff', '#b4a7ff', '#c5f06b', '#ff8fb8', '#4fe3b8', '#ff9f5a']
 const colorOf = (name) => PALETTE[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % PALETTE.length]
 
 function MemoryBar({ step, size }) {
@@ -56,7 +56,7 @@ function MemoryBar({ step, size }) {
             <motion.div
               key={`${s.start}-${s.size}`}
               layout
-              style={{ width: `${(s.size / size) * 100}%`, background: s.owner ? colorOf(s.owner) + '33' : 'transparent', borderColor: s.owner ? colorOf(s.owner) : '#2a2838' }}
+              style={{ width: `${(s.size / size) * 100}%`, background: s.owner ? colorOf(s.owner) + '33' : 'transparent', borderColor: s.owner ? colorOf(s.owner) : '#1c3226' }}
               className={`relative border-r flex flex-col items-center justify-center text-[10px] font-mono overflow-hidden ${chosen ? 'ring-2 ring-white ring-inset' : ''}`}
               title={`${s.owner ?? 'free'}: ${s.size} KB at address ${s.start}`}
             >

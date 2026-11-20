@@ -1,14 +1,309 @@
 @import "tailwindcss";
 
+/*
+  Terminal theme: phosphor green on a green-black screen, like a console.
+  The roles are the same on every page, and they follow the states an operating system has:
+    phosphor green = running / active / the thing to watch      amber = ready, waiting your turn, warnings
+    coral          = blocked, fault, deadlock, error            steel blue = I/O and secondary series
+    lavender       = a further series
+  Tailwind's own colour scales are re-pointed below, so every existing text-cyan-400 / bg-gray-700 /
+  text-amber-400 in the pages picks up the palette without touching each page.
+*/
 @theme {
-  --color-os-bg: #030712;
-  --color-os-surface: #0f1117;
-  --color-os-border: #1a2433;
-  --color-os-purple: #06b6d4;
-  --color-os-indigo: #0891b2;
-  --color-os-green: #22c55e;
-  --color-os-amber: #eab308;
-  --color-os-red: #f43f5e;
-  --color-os-blue: #06b6d4;
-  --color-os-muted: #64748b;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  /* named tokens used across the app */
+  --color-os-bg: #060a08;
+  --color-os-surface: #0b130f;
+  --color-os-border: #1c3226;
+  --color-os-purple: #b4a7ff;
+  --color-os-indigo: #8fa0ff;
+  --color-os-green: #6dffb0;
+  --color-os-amber: #ffb454;
+  --color-os-red: #ff6b6b;
+  --color-os-blue: #7cc4ff;
+  --color-os-muted: #6f8a7b;
+
+  --color-white: #eaf4ee;
+  --color-black: #030504;
+
+  /* neutrals: green-grey ink instead of plain grey */
+  --color-gray-50: #f1f7f3;
+  --color-gray-100: #e3efe7;
+  --color-gray-200: #d0e1d6;
+  --color-gray-300: #b4cbbb;
+  --color-gray-400: #8fab9b;
+  --color-gray-500: #6f8a7b;
+  --color-gray-600: #52695b;
+  --color-gray-700: #2c4237;
+  --color-gray-800: #1c3226;
+  --color-gray-900: #0f1c15;
+  --color-gray-950: #060a08;
+  --color-slate-300: #b4cbbb;
+  --color-slate-400: #8fab9b;
+  --color-slate-500: #6f8a7b;
+  --color-slate-600: #52695b;
+  --color-slate-700: #2c4237;
+
+  /* brand / "running": phosphor green (replaces cyan) */
+  --color-cyan-100: #d9ffe9;
+  --color-cyan-200: #bfffd9;
+  --color-cyan-300: #9fffcb;
+  --color-cyan-400: #6dffb0;
+  --color-cyan-500: #3ee68c;
+  --color-cyan-600: #12864e;
+  --color-cyan-700: #0e6a3e;
+  --color-cyan-800: #0b4f2f;
+  --color-cyan-900: #093a24;
+  --color-cyan-950: #05241a;
+  --color-teal-400: #4fe3b8;
+  --color-teal-500: #22cf9d;
+  --color-sky-300: #b4dcff;
+  --color-sky-400: #7cc4ff;
+  --color-sky-500: #4aa6f2;
+
+  /* "done" / success: a bluer mint, and a yellow-green, so they stay apart from the phosphor brand colour */
+  --color-emerald-300: #8df5d3;
+  --color-emerald-400: #4fe3b8;
+  --color-emerald-500: #22cf9d;
+  --color-emerald-600: #14a77d;
+  --color-emerald-700: #0f8062;
+  --color-green-300: #c5f5a8;
+  --color-green-400: #9ae870;
+  --color-green-500: #6ccf45;
+  --color-green-600: #4fa832;
+  --color-lime-400: #c5f06b;
+
+  /* "ready" / warning: amber */
+  --color-amber-200: #ffe7c2;
+  --color-amber-300: #ffd699;
+  --color-amber-400: #ffb454;
+  --color-amber-500: #f59e2e;
+  --color-amber-600: #d38216;
+  --color-yellow-400: #ffd166;
+  --color-yellow-500: #f7b733;
+  --color-orange-400: #ffa066;
+  --color-orange-500: #ff8a4c;
+
+  /* "blocked" / error: coral */
+  --color-red-300: #ffb3b3;
+  --color-red-400: #ff6b6b;
+  --color-red-500: #f04f5a;
+  --color-red-600: #d63b46;
+  --color-rose-200: #ffd0da;
+  --color-rose-300: #ffb0c0;
+  --color-rose-400: #ff7f9a;
+  --color-rose-500: #f2557c;
+  --color-rose-600: #d63d66;
+  --color-pink-500: #f06fb0;
+
+  /* I/O and other series: steel blue, periwinkle, lavender */
+  --color-blue-300: #b4dcff;
+  --color-blue-400: #7cc4ff;
+  --color-blue-500: #4aa6f2;
+  --color-blue-600: #2f86d4;
+  --color-indigo-400: #8fa0ff;
+  --color-indigo-500: #6f7df0;
+  --color-indigo-600: #5562d6;
+  --color-violet-300: #d4ccff;
+  --color-violet-400: #b4a7ff;
+  --color-violet-500: #9a88f5;
+  --color-purple-300: #d4ccff;
+  --color-purple-400: #b4a7ff;
+  --color-purple-500: #9a88f5;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  color: var(--color-white);
+  font-family: var(--font-sans);
+  background-color: #060a08;
+  /* console grid: a fine 32px grid, fading out toward the bottom */
+  background-image:
+    linear-gradient(rgba(109, 255, 176, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(109, 255, 176, 0.045) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% -10%, rgba(62, 230, 140, 0.10), transparent 55%);
+  background-size: 32px 32px, 32px 32px, 100% 100%;
+  background-attachment: fixed;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* headings read like terminal output; body text stays sans */
+h1, h2 {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgba(109, 255, 176, 0.3);
+}
+
+:focus-visible {
+  outline: 2px solid #6dffb0;
+  outline-offset: 2px;
+}
+
+input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
+
+/* a block cursor that blinks, for headlines and prompts */
+@keyframes caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.caret::after {
+  content: '';
+  display: inline-block;
+  width: 0.55em;
+  height: 0.95em;
+  margin-left: 0.12em;
+  vertical-align: -0.1em;
+  background: #6dffb0;
+  animation: caret-blink 1.1s steps(1) infinite;
+}
+
+/* faint scanlines, for the hero only */
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.18) 0, rgba(0, 0, 0, 0.18) 1px, transparent 1px, transparent 3px);
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------ motion ----- */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);       /* quick start, soft landing */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);   /* a hint of overshoot for presses */
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Everything interactive eases between states instead of snapping. Tailwind's own transition utilities
+   (in a later layer) still win where a component sets its own timing. */
+@layer base {
+  button, a, input, select, textarea, summary,
+  [class*="rounded-"] {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform, filter;
+    transition-duration: 180ms;
+    transition-timing-function: var(--ease-out);
+  }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+}
+
+/* pressing a button gives a small tactile dip; hovering lifts primary buttons a touch */
+button:not(:disabled):active {
+  transform: translateY(1px) scale(0.97);
+  transition-duration: 70ms;
+}
+button.bg-cyan-600:not(:disabled):hover,
+button.bg-cyan-500:not(:disabled):hover,
+a.bg-cyan-500:hover,
+a.bg-cyan-600:hover {
+  box-shadow: 0 8px 24px -10px rgba(109, 255, 176, 0.55);
+  transform: translateY(-1px);
+}
+
+input:not([type="range"]):focus,
+select:focus,
+textarea:focus {
+  border-color: #6dffb0;
+  box-shadow: 0 0 0 3px rgba(109, 255, 176, 0.14);
+}
+
+/* sliders: a rounded track and a thumb that grows and glows under the pointer */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6dffb0 0, #6dffb0 var(--fill, 0%), #1c3226 var(--fill, 0%), #1c3226 100%);
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: transparent; }
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 999px; background: transparent; }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px; margin-top: -6px;
+  border-radius: 50%;
+  background: #6dffb0;
+  border: 2px solid #060a08;
+  box-shadow: 0 0 0 0 rgba(109, 255, 176, 0.4);
+  transition: transform 160ms var(--ease-spring), box-shadow 200ms var(--ease-out);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #6dffb0;
+  border: 2px solid #060a08;
+  transition: transform 160ms var(--ease-spring), box-shadow 200ms var(--ease-out);
+}
+input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.18); box-shadow: 0 0 0 6px rgba(109, 255, 176, 0.16); }
+input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.3); box-shadow: 0 0 0 9px rgba(109, 255, 176, 0.2); }
+input[type="range"]:hover::-moz-range-thumb { transform: scale(1.18); }
+input[type="range"]:active::-moz-range-thumb { transform: scale(1.3); }
+
+/* content rises into place, one block after another, whenever a page opens */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+.page-enter > * > * {
+  animation: rise-in 520ms var(--ease-out) both;
+}
+.page-enter > * > *:nth-child(1) { animation-delay: 0ms; }
+.page-enter > * > *:nth-child(2) { animation-delay: 60ms; }
+.page-enter > * > *:nth-child(3) { animation-delay: 120ms; }
+.page-enter > * > *:nth-child(4) { animation-delay: 180ms; }
+.page-enter > * > *:nth-child(5) { animation-delay: 240ms; }
+.page-enter > * > *:nth-child(6) { animation-delay: 300ms; }
+.page-enter > * > *:nth-child(7) { animation-delay: 350ms; }
+.page-enter > * > *:nth-child(n+8) { animation-delay: 400ms; }
+
+.hero-text > * { animation: rise-in 650ms var(--ease-out) both; }
+.hero-text > *:nth-child(1) { animation-delay: 80ms; }
+.hero-text > *:nth-child(2) { animation-delay: 220ms; }
+.hero-text > *:nth-child(3) { animation-delay: 340ms; }
+.hero-text > *:nth-child(4) { animation-delay: 440ms; }
+.hero-text > *:nth-child(5) { animation-delay: 520ms; }
+
+.animate-rise { animation: rise-in 420ms var(--ease-out) both; }
+.animate-fade { animation: fade-in 400ms var(--ease-out) both; }
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(28, 50, 38, 0.5) 25%, rgba(109, 255, 176, 0.14) 50%, rgba(28, 50, 38, 0.5) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .caret::after { animation: none; }
 }

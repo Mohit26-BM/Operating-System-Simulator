@@ -12,7 +12,7 @@ export default function CodePanel({ code, highlightLine, annotations = {} }) {
           return (
             <motion.div
               key={i}
-              animate={isActive ? { backgroundColor: 'rgba(99,102,241,0.15)' } : { backgroundColor: 'transparent' }}
+              animate={isActive ? { backgroundColor: 'rgba(143,160,255,0.15)' } : { backgroundColor: 'transparent' }}
               transition={{ duration: 0.2 }}
               className={`flex gap-3 px-2 py-0.5 rounded ${isActive ? 'border-l-2 border-cyan-500' : 'border-l-2 border-transparent'}`}
             >
